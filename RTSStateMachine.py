@@ -1,7 +1,8 @@
 from statemachine import StateMachine, State
-#from GUI import update_label
+import time
+import threading
 
-'''A state machine to manage the movement of the RTS arm in correspondence with input from the light curtain'''
+'''A state machine to manage the movement of the RTS arm in correspondence with input from the robot'''
 class RTSMachine(StateMachine):
      moving = State(initial=True)
      stopping = State() 
@@ -12,6 +13,13 @@ class RTSMachine(StateMachine):
          | stopping.to(stopped)
          | stopped.to(moving)
      )
+
+     def __init__(self):
+         super().__init__()
+         
+         # Creates thread to update the state from the state machine side
+         threading.Thread(target=self.test_input).start()
+         
 
      async def before_cycle(self, event: str, source: State, target: State, message: str = ""):
          message = ". " + message if message else ""
@@ -26,6 +34,10 @@ class RTSMachine(StateMachine):
      def on_enter_stopped(self):
          print("Robot is stopped.")
 
-#if __name__ == "__main__":
-     #sm: RTSMachine = RTSMachine()
-     #gui.GUI(sm)
+     # Cycles the robot from the state machine side
+     def test_input(self):
+         time.sleep(10)
+         self.cycle()
+         time.sleep(1)
+         self.cycle()
+         print("Test input cycled")
