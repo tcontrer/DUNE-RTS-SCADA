@@ -46,7 +46,7 @@ class GUI:
           # Creating the window
           self.root.mainloop()
 
-     # Run every second to check the state and update the label if necessary
+     # Run every second to check the state and update the label
      def check_state(self):
           while self.flag:
                oldState: str = self.sm.current_state.id
@@ -55,8 +55,7 @@ class GUI:
                     break
                else:
                     print(self.sm.current_state.id)
-                    if oldState != self.sm.current_state.id:
-                         self.update_label()
+                    self.update_label()
                     
 
      # When window is closed destroies the GUI
