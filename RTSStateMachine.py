@@ -17,8 +17,8 @@ class RTSMachine(StateMachine):
      def __init__(self):
          super().__init__()
          
-         # Creates thread to update the state from the state machine side
-         threading.Thread(target=self.test_input).start()
+         # Creates thread to update the state from the state machine side (using for testing)
+         #threading.Thread(target=self.test_input).start()
          
 
      async def before_cycle(self, event: str, source: State, target: State, message: str = ""):
@@ -36,7 +36,7 @@ class RTSMachine(StateMachine):
 
      # Cycles the robot from the state machine side
      def test_input(self):
-         time.sleep(10)
+         time.sleep(5)
          self.cycle()
          time.sleep(1)
          self.cycle()
