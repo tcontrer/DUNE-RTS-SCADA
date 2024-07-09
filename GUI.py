@@ -18,11 +18,11 @@ class GUI:
           self.root.config(bg="#99D6EA") 
 
           # Adding label to display state
-          if self.sm.current_state.id == "moving":
-               self.label: tk.Label = tk.Label(self.root, text="Current State: " + self.sm.current_state.id, font=('Helvetica', 20), fg="#4C8C2B", bg="lightblue")
+          if (self.sm.current_state.id == "starting") | (self.sm.current_state.id == "started") | (self.sm.current_state.id == "ground"):
+               self.label: tk.Label = tk.Label(self.root, text="Current State: " + self.sm.current_state.id, font=('Helvetica', 24), fg="#4C8C2B", bg="lightblue")
                self.label.pack()
           else: 
-               self.label: tk.Label = tk.Label(self.root, text="Current State: " + self.sm.current_state.id, font=('Helvetica', 20), fg="#000000", bg="lightblue")
+               self.label: tk.Label = tk.Label(self.root, text="Current State: " + self.sm.current_state.id, font=('Helvetica', 24), fg="#000000", bg="lightblue")
                self.label.pack(padx=10, pady=10)
 
           # A frame to hold the buttons
@@ -33,7 +33,7 @@ class GUI:
           self.startbtn: tk.Button = tk.Button(self.frame, text="Start", font=('Helvetica', 18), command=self.start_robot)
           self.startbtn.grid(row=0, column=0, padx=10, pady=10)
 
-          # Button to update the state to stopped (can only be pressed if moving)
+          # Button to update the state to stopped (can only be pressed if started)
           self.stopbtn: tk.Button = tk.Button(self.frame, bg="#FF0000", text="Stop", font=('Helvetica', 18), command=self.stop_robot)
           self.stopbtn.grid(row=0, column=1, padx=10, pady=10)
 
@@ -63,28 +63,43 @@ class GUI:
           print("Closing")
           self.flag = False
           self.root.destroy()
+          self.sm.exists = False
 
-     # Changes the state to moving when currently stopped
+     # Changes the state to starting when currently stopped
      def start_robot(self):
-          if(self.sm.current_state.id == "stopped"):
-              self.cycle()
-          elif(self.sm.current_state.id == "moving"):
-               messagebox.showerror(message="The robot is already moving.")
-          elif(self.sm.current_state.id == "stopping"):
-              messagebox.showerror(message="The robot is already stopping.")
-
-     # Changes the state to stopped when currently moving     
-     def stop_robot(self):
-          if(self.sm.current_state.id == "moving"):
+          self.sm.GUIidle = False
+          print("GUI active")
+          if(self.sm.current_state.id == "stopped") | (self.sm.current_state.id == "ground"):
               self.cycle()
               time.sleep(1)
               self.cycle()
+              # USED FOR DEBUGGING print("Cycled twice from start button")
+          elif(self.sm.current_state.id == "starting"):
+               self.cycle()
+               # USED FOR DEBUGGING print("Cycled once from start button")
+          elif(self.sm.current_state.id == "stopping"):
+              messagebox.showerror(message="The robot is already stopping.")
+
+          self.sm.GUIidle = True
+          print("GUI idle")
+
+     # Changes the state to stopped when currently started     
+     def stop_robot(self):
+          self.sm.GUIidle = False
+          print("GUI active")
+          if(self.sm.current_state.id == "started"):
+              self.cycle()
+              time.sleep(1)
+              self.cycle()
+              # USED FOR DEBUGGING print("Cycled twice from stop button")
           else:
               messagebox.showerror(message="The robot is already stopping or stopped.")
+          self.sm.GUIidle = True
+          print("GUI idle")
     
     # Changes label text and color to correspond to the current state
      def update_label(self):
-          if self.sm.current_state.id == "moving":
+          if (self.sm.current_state.id == "starting") | (self.sm.current_state.id == "started"):
                self.label.config(text="Current State: " + self.sm.current_state.id, fg="#4C8C2B")
                self.root.update()
           elif self.sm.current_state.id == "stopping":
