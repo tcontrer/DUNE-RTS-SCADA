@@ -6,6 +6,8 @@ import time
 import threading
 
 
+# * Creates a user interface that displays the current state and has buttons to start and stop the robot
+# * Must be passed a RTS state machine
 class GUI:
      def __init__(self, sm: RTSSM.RTSMachine) -> None:       
           self.sm: RTSSM.RTSMachine = sm
@@ -29,11 +31,13 @@ class GUI:
           self.frame = tk.Frame(self.root, bg="lightblue")
           self.frame.pack()
 
-          # A button to update the state to started (can only be pressed if stopped)
+          # * A button to start the robot (can't be pressed if stopping)
+          # * Calls the start_robot() method
           self.startbtn: tk.Button = tk.Button(self.frame, text="Start", font=('Helvetica', 18), command=self.start_robot)
           self.startbtn.grid(row=0, column=0, padx=10, pady=10)
 
-          # Button to update the state to stopped (can only be pressed if started)
+          # * Button to stop the robot (can only be pressed if started)
+          # * Calls the stop_robot() method
           self.stopbtn: tk.Button = tk.Button(self.frame, bg="#FF0000", text="Stop", font=('Helvetica', 18), command=self.stop_robot)
           self.stopbtn.grid(row=0, column=1, padx=10, pady=10)
 
@@ -47,7 +51,7 @@ class GUI:
           # Creating the window
           self.root.mainloop()
 
-     # Run every second to check the state and update the label
+     # * Checks the state and updates the label accordingly every second
      def check_state(self):
           while self.flag:
                time.sleep(1)
@@ -58,14 +62,14 @@ class GUI:
                     self.update_label()
                     
 
-     # When window is closed destroies the GUI
+     # * When window is closed destroies the GUI
      def on_closing(self):
           print("Closing")
           self.flag = False
           self.root.destroy()
           self.sm.exists = False
 
-     # Changes the state to starting when currently stopped
+     # * Changes the state to started unless the robot is stopping (run by start button)
      def start_robot(self):
           self.sm.GUIidle = False
           print("GUI active")
@@ -73,17 +77,17 @@ class GUI:
               self.cycle()
               time.sleep(1)
               self.cycle()
-              # USED FOR DEBUGGING print("Cycled twice from start button")
+              # // USED FOR DEBUGGING print("Cycled twice from start button")
           elif(self.sm.current_state.id == "starting"):
                self.cycle()
-               # USED FOR DEBUGGING print("Cycled once from start button")
+               # // USED FOR DEBUGGING print("Cycled once from start button")
           elif(self.sm.current_state.id == "stopping"):
-              messagebox.showerror(message="The robot is already stopping.")
+              messagebox.showerror(message="The robot can't be started because it is stopping.")
 
           self.sm.GUIidle = True
           print("GUI idle")
 
-     # Changes the state to stopped when currently started     
+     # * Changes the state to stopped when currently started (run by stop button)
      def stop_robot(self):
           self.sm.GUIidle = False
           print("GUI active")
@@ -91,13 +95,13 @@ class GUI:
               self.cycle()
               time.sleep(1)
               self.cycle()
-              # USED FOR DEBUGGING print("Cycled twice from stop button")
+              # // USED FOR DEBUGGING print("Cycled twice from stop button")
           else:
-              messagebox.showerror(message="The robot is already stopping or stopped.")
+              messagebox.showerror(message="The can't be stopped because it isn't in the started state.")
           self.sm.GUIidle = True
           print("GUI idle")
     
-    # Changes label text and color to correspond to the current state
+    # * Changes label text and color to correspond to the current state
      def update_label(self):
           if (self.sm.current_state.id == "starting") | (self.sm.current_state.id == "started"):
                self.label.config(text="Current State: " + self.sm.current_state.id, fg="#4C8C2B")
@@ -112,7 +116,7 @@ class GUI:
                self.stopbtn: tk.Button = tk.Button(self.frame, bg="#FF0000", text="Stop", font=('Arial', 18), command=self.stop_robot)
                self.stopbtn.grid(row=0, column=1, padx=10, pady=10)
 
-     # Cyles the state machine and updates the label
+     # * Cyles the state machine and updates the label
      def cycle(self):
           self.sm.cycle()
           self.update_label()

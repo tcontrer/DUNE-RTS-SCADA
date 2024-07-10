@@ -3,7 +3,7 @@ import time
 import threading
 import os
 
-'''A state machine to manage the movement of the RTS arm in correspondence with input from the robot'''
+# * A state machine to manage the movement of the RTS arm in correspondence with input from the robot
 class RTSMachine(StateMachine):
      # The states the system can be in
      ground = State(initial=True)
@@ -28,14 +28,14 @@ class RTSMachine(StateMachine):
          self.GUIidle: bool = True
          super().__init__()
 
-     async def before_cycle(self, event: str, source: State, target: State, message: str = ""):
+     def before_cycle(self, event: str, source: State, target: State, message: str = ""):
          message = ". " + message if message else ""
          return f"Running {event} from {source.id} to {target.id}{message}"
      
 
-
-     # Everytime the robot enters a state it prints that state to the terminal
-     # If that state needs to get input from the robot a thread is created
+     # * Methods called automatically when the robot enters the state they specify
+     # * Everytime the robot enters a state it prints that state to the terminal
+     # * If that state needs to get input from the robot a thread is created
      def on_enter_ground(self):
          time.sleep(.5)
          print("In ground state")
@@ -57,11 +57,12 @@ class RTSMachine(StateMachine):
          print("Robot is stopped.")
 
 
-     # Method that reads a file written by the robot and updates the state if needed
-     # Must be passed the state at the time of method call so it can stop once the state is changed
+     # * Method that reads a file written by the robot and updates the state if needed
+     # * Must be passed the state at the time of method call so it can stop once the state is changed
      def check_input(self, state: str):
-         # Path name for file being read
-         # Must be updated for different machines and file names
+         
+         # * Path name for file being read
+         # ! Must be updated for different machines and file names
          path: str = '/Users/volson/Desktop/robotState.txt'
          
          if os.path.isfile(path):
@@ -77,8 +78,10 @@ class RTSMachine(StateMachine):
                         f.seek(0)
                     
                     last_line = f.readline().decode()
-                    # USED FOR DEBUGGING print(f"Last line is {last_line}")
+                    # // USED FOR DEBUGGING print(f"Last line is {last_line}")
 
+                    # * Will change the state according to the last line of the file
+                    # * Won't run if currently cycling due to input from the GUI
                     if (last_line == "Stopped") & (self.GUIidle):
                         self.stop() 
                     elif (last_line == "Starting") & (self.GUIidle):
@@ -93,44 +96,44 @@ class RTSMachine(StateMachine):
              print("File does not exist")
 
 
-     # Next methods are called from within checkInput()
-     # Cycles to the stopping state
+     # * Next methods are called from within checkInput()
+     # * Cycles to the stopping state
      def startStopping(self):
          if self.current_state.id == "started":
              self.cycle()
-             # USED FOR DEBUGGING print("Cycled once from file")
+             # // USED FOR DEBUGGING print("Cycled once from file")
          elif self.current_state.id == "starting":
              self.cycle()
              self.cycle()
-             # USED FOR DEBUGGING print("Cycled twice from file")
+             # // USED FOR DEBUGGING print("Cycled twice from file")
 
-     # Cycles to the stopped state
+     # * Cycles to the stopped state
      def stop(self):
          if self.current_state.id == "started":
              self.cycle()
              self.cycle()
-             # USED FOR DEBUGGING print("Cycled twice from file")
+             # // USED FOR DEBUGGING print("Cycled twice from file")
          elif self.current_state.id == "stopping":
              self.cycle()
-             # USED FOR DEBUGGING print("Cycled once from file")
+             # // USED FOR DEBUGGING print("Cycled once from file")
          elif self.current_state.id == "starting":
              self.cycle()
              self.cycle()
              self.cycle()
-             # USED FOR DEBUGGING print("Cycled three times from file")
+             # // USED FOR DEBUGGING print("Cycled three times from file")
 
-     # Cycles to the starting state
+     # * Cycles to the starting state
      def beginStarting(self):
          if (self.current_state.id == "stopped") | (self.current_state.id == "ground"):
              self.cycle()
-             # USED FOR DEBUGGING print("Cycled once from file")
+             # // USED FOR DEBUGGING print("Cycled once from file")
     
-     # Cycles to the started state
+     # * Cycles to the started state
      def start(self):
          if (self.current_state.id == "starting"):
              self.cycle()
-             # USED FOR DEBUGGING print("Cycled once from file")
+             # // USED FOR DEBUGGING print("Cycled once from file")
          elif (self.current_state.id == "ground"):
              self.cycle()
              self.cycle()
-             # USED FOR DEBUGGING print("Cycled twice from file")
+             # // USED FOR DEBUGGING print("Cycled twice from file")
