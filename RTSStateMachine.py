@@ -6,14 +6,23 @@ import os
 # * A state machine to manage the movement of the RTS arm in correspondence with input from the robot
 
 # * Transitions:
-# * cycle: Will transition the state machine to the next normal (non error) state. Ground to starting, starting to started, etc.
-# * curtain_tripped: Will transition the state machine from any state to the curtainTripped state.
-# * curtain_reset: Will transition the state machine from curtainTripped to the stopped state. 
+# cycle: Will transition the state machine to the next normal (non error) state. Ground to starting, starting to started, etc.
+# curtain_tripped: Will transition the state machine from any state to the curtainTripped state.
+# curtain_reset: Will transition the state machine from curtainTripped to the stopped state. 
 
 # * Methods:
-# * on_enter_NAMEOFSTATE: Automatically called when NAMEOFSTATE is entered
-# * checkInput: Checks the last line of a file every second and responds based on what that line is. The file is written 
-# * from within the RTS software. Provides a connection between the RTS and the state machine.
+# on_enter_NAMEOFSTATE: Automatically called when NAMEOFSTATE is entered
+# checkInput: Checks the last line of a file every second and responds based on what that line is. The file is written 
+# from within the RTS software. Provides a connection between the RTS and the state machine.
+# methods under checkInput: They are called from within check input and cycle the state machine based on its current state
+
+# * Variables:
+# exists: boolean that is true until the GUI is closed. Used to properly shut down the state machine
+# GUIidle: boolean that is false when a button is pressed on the GUI and then becomes true again when the corrosponding action 
+# is complete
+# runningMethodCI: booolean that is true when a method within checkInput is called and then becomes false again when that 
+# the corrosponding action is complete
+
 class RTSMachine(StateMachine):
      # The states the system can be in
      ground = State(initial=True)
@@ -22,7 +31,7 @@ class RTSMachine(StateMachine):
      stopping = State() 
      stopped = State()
      curtainTripped = State()
-     
+
      # Transitions the robot between non error states
      cycle = (
          ground.to(starting)
@@ -122,22 +131,22 @@ class RTSMachine(StateMachine):
                     # * Will change the state according to the last line of the file
                     # * Won't run anything that calls cycle if currently cycling due to input from the GUI. Achieved by GUIidle check.
                     # * Won't run if one of these methods is already being run to prevent accidently cycling. Achieved by runningMethodCI check.
-                    if (last_line == "Stopped") & (self.GUIidle) & (not self.runningMethodCI):
+                    if (last_line.rstrip() == "Stopped") & (self.GUIidle) & (not self.runningMethodCI):
                         self.runningMethodCI = True
                         self.stop() 
-                    elif (last_line == "Starting") & (self.GUIidle) & (not self.runningMethodCI):
+                    elif (last_line.rstrip() == "Starting") & (self.GUIidle) & (not self.runningMethodCI):
                         self.runningMethodCI = True
                         self.beginStarting()
-                    elif (last_line == "Started") & (self.GUIidle) & (not self.runningMethodCI):
+                    elif (last_line.rstrip() == "Started") & (self.GUIidle) & (not self.runningMethodCI):
                         self.runningMethodCI = True
                         self.start()
-                    elif (last_line == "Stopping") & (self.GUIidle) & (not self.runningMethodCI):
+                    elif (last_line.rstrip() == "Stopping") & (self.GUIidle) & (not self.runningMethodCI):
                         self.runningMethodCI = True
                         self.startStopping()
-                    elif (last_line == "CurtainTripped") & (not self.runningMethodCI):
+                    elif (last_line.rstrip() == "CurtainTripped") & (not self.runningMethodCI):
                         self.runningMethodCI = True
                         self.tripCurtain()
-                    elif (last_line == "CurtainReset") & (not self.runningMethodCI):
+                    elif (last_line.rstrip() == "CurtainReset") & (not self.runningMethodCI):
                         self.runningMethodCI = True
                         self.resetCurtain()
                     time.sleep(1)
