@@ -112,6 +112,9 @@ class GUI:
           elif self.sm.current_state.id == "stopped":
                self.label.config(text="Current State: " + self.sm.current_state.id, fg="#8A2A2B")
                self.root.update()
+          elif self.sm.current_state.id == "curtainTripped":
+               self.label.config(text="Current State: " + self.sm.current_state.id, fg="#8A2A2B")
+               self.root.update()
           else:
                self.stopbtn: tk.Button = tk.Button(self.frame, bg="#FF0000", text="Stop", font=('Arial', 18), command=self.stop_robot)
                self.stopbtn.grid(row=0, column=1, padx=10, pady=10)
