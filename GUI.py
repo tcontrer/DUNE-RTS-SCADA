@@ -19,6 +19,7 @@ import threading
 # update_label: Changes the color and text of the label to match the current state
 # update_buttons: Disables the buttons in states where they shouldn't be pressed and resets them when they can be pressed
 # update_background: Changes the background to orange when in an fault state and resets it when not
+# curtain_tripped_message: Called within update_background. Creates a pop up explaing that the curtain has been tripped.
 # cycle: Cycles the state machine and updates the label
 
 # * Variables:
@@ -136,24 +137,45 @@ class GUI:
           elif self.sm.current_state.id == "curtainTripped":
                self.label.config(text="Current State: " + self.sm.current_state.id, fg="#8A2A2B")
                self.root.update()
+          elif self.sm.current_state.id in self.sm.movingChipStates:
+               self.label.config(text="Moving Chips", fg="#4C8C2B")
+               self.root.update()
+          elif self.sm.current_state.id in self.sm.testingChipStates:
+               self.label.config(text="Testing Chips", fg="#4C8C2B")
+               self.root.update()
           else:
                self.stopbtn: tk.Button = tk.Button(self.frame, bg="#FF0000", text="Stop", font=('Arial', 18), command=self.stop_robot)
                self.stopbtn.grid(row=0, column=1, padx=10, pady=10)
 
-     # * Changes the state of the buttons based on the state of the state machine to prevent them from being pressed at the wrong times
+     # * Changes the state and color of the buttons based on the state of the state machine to prevent them from being pressed at the wrong times
      def update_buttons(self):
           if(self.sm.current_state.id == "ground"):
                self.startbtn["state"] = "normal"
+               self.startbtn.config(bg="#4C8C2B")
+
                self.stopbtn["state"] = "disabled"
-          if(self.sm.current_state.id == "starting") | (self.sm.current_state.id == "started"):
+               self.stopbtn.config(bg="#FAF9F6")
+
+          if(self.sm.current_state.id == "starting") | (self.sm.current_state.id == "started")  | (self.sm.current_state.id in self.sm.movingChipStates) | (self.sm.current_state.id in self.sm.testingChipStates):
                self.startbtn["state"] = "disabled"
+               self.startbtn.config(bg="#FAF9F6")
+
                self.stopbtn["state"] = "normal"
+               self.stopbtn.config(bg="#8A2A2B")
+
           if (self.sm.current_state.id == "stopped"):
                self.startbtn["state"] = "normal"
+               self.startbtn.config(bg="#4C8C2B")
+
                self.stopbtn["state"] = "disabled"
+               self.stopbtn.config(bg="#FAF9F6")
+
           if (self.sm.current_state.id == "stopping") | (self.sm.current_state.id == "curtainTripped"):
                self.startbtn["state"] = "disabled"
+               self.startbtn.config(bg="#FAF9F6")
+
                self.stopbtn["state"] = "disabled"
+               self.stopbtn.config(bg="#FAF9F6")
 
      # * Sets the background to orange if in a fault state and resets it if not
      def update_background(self):
@@ -161,11 +183,15 @@ class GUI:
                self.root.config(bg="#CB6015")
                self.frame.config(bg="#FAF9F6")
                self.label.config(bg="#FAF9F6")
-               messagebox.showerror(message="The light curtain has been tripped. The area around the robot must be cleared. Then you can reset it by pressing the small red square button on the control pannel.")
+               threading.Thread(target=self.curtain_tripped_message).start()
           if(self.sm.current_state.id == "stopped"):
                self.root.config(bg="#99D6EA")
                self.frame.config(bg="lightblue")
                self.label.config(bg="lightblue")
+
+     # * Creates a pop up with an error message when the light curtain is tripped
+     def curtain_tripped_message(self):
+          messagebox.showerror(message="Light Curtain Tripped", detail="The area around the robot must be cleared. Then you can reset it by pressing the small red square button on the control pannel.")
 
      # * Cyles the state machine and updates the label
      def cycle(self):
