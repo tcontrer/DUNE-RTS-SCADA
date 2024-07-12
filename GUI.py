@@ -18,8 +18,8 @@ import threading
 # stop_robot: Cycles through to the stopping then the stopped state
 # update_label: Changes the color and text of the label to match the current state
 # update_buttons: Disables the buttons in states where they shouldn't be pressed and resets them when they can be pressed
-# update_background: Changes the background to orange when in an fault state and resets it when not
-# curtain_tripped_message: Called within update_background. Creates a pop up explaing that the curtain has been tripped.
+# update_background: Changes the background to orange when in an fault state and resets it when not. Creates a popup
+# when the curtain is tripped.
 # cycle: Cycles the state machine and updates the label
 
 # * Variables:
@@ -56,7 +56,7 @@ class GUI:
 
           # * Button to stop the robot (can only be pressed if started)
           # * Calls the stop_robot() method
-          self.stopbtn: tk.Button = tk.Button(self.frame, bg="#8A2A2B", text="Stop", font=('Helvetica', 18), command=self.stop_robot)
+          self.stopbtn: tk.Button = tk.Button(self.frame, bg="red", text="Stop", font=('Helvetica', 18), command=self.stop_robot)
           self.stopbtn.grid(row=0, column=1, padx=10, pady=10)
 
           # Create a new thread where the gui will constantly check the state
@@ -161,7 +161,7 @@ class GUI:
                self.startbtn.config(bg="#FAF9F6")
 
                self.stopbtn["state"] = "normal"
-               self.stopbtn.config(bg="#8A2A2B")
+               self.stopbtn.config(bg="red")
 
           if (self.sm.current_state.id == "stopped"):
                self.startbtn["state"] = "normal"
@@ -183,15 +183,13 @@ class GUI:
                self.root.config(bg="#CB6015")
                self.frame.config(bg="#FAF9F6")
                self.label.config(bg="#FAF9F6")
-               threading.Thread(target=self.curtain_tripped_message).start()
+               self.root.update()
+               messagebox.showerror(message="Light Curtain Tripped", detail="The area around the robot must be cleared. Then you can reset it by pressing the small red square button on the control pannel. Then press OK.")
           if(self.sm.current_state.id == "stopped"):
                self.root.config(bg="#99D6EA")
                self.frame.config(bg="lightblue")
                self.label.config(bg="lightblue")
 
-     # * Creates a pop up with an error message when the light curtain is tripped
-     def curtain_tripped_message(self):
-          messagebox.showerror(message="Light Curtain Tripped", detail="The area around the robot must be cleared. Then you can reset it by pressing the small red square button on the control pannel.")
 
      # * Cyles the state machine and updates the label
      def cycle(self):
