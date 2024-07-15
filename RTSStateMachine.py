@@ -14,7 +14,10 @@ import os
 # begin_cleanup: Will transition the state machine to the cleanup states.
 # cleanup_cycle: Will transition the state machine between the cleanup states.
 # curtain_tripped: Will transition the state machine from any state to the curtainTripped state.
-# curtain_reset: Will transition the state machine from curtainTripped to the stopped state. 
+# reset_cycle: Will transition the state machine from the curtainTripped state through the resetting states. Run if there 
+# could be chips on the RTS's arm.
+# straight_reset: Will transition the state machine from curtainTripped to the ground state. Run if there is no possiblity 
+# of chips being on the arm.
 
 # * Methods:
 # on_enter_NAMEOFSTATE: Automatically called when NAMEOFSTATE is entered. Print the state to the terminal and update lastNFS
@@ -29,8 +32,33 @@ import os
 # runningMethodCI: booolean that is true when a method within checkInput is called and then becomes false again when that 
 # the corrosponding action is complete
 # lastNFT: string that tracks the last non fault state the state machine was in. Used to help restart after light curtain trip
+# chipsInArm: boolean that is true when there are chips on the RTS's arm and false when there aren't.
 
 class RTSMachine(StateMachine):
+     def __init__(self):
+         # Tracks if the GUI has been closed
+         self.exists: bool = True
+         # Tracks if a button on the GUI has been pressed
+         self.GUIidle: bool = True
+         # Tracks if a method is in progress from check input
+         self.runningMethodCI = False
+         # Tracks the last non fault state the robot has been in
+         self.lastNFS: State
+         # Tracks if the arm has chips in it
+         self.chipsInArm: bool = False
+
+         # * Tuples that group states together. Used to have more general checks of state.
+         self.basicStates: tuple = ("ground", "starting", "started", "stopping", "stopped")
+         self.movingChipStates: tuple = ("pickingChips", "chipsPicked", "movingChipsToBoard", "chipsMovedToBoard", "placingChips", "chipsPlaced")
+         self.testingChipStates: tuple = ("poweringOnWIB", "WIBOn", "testingChips", "chipsTested", "sendingData", "dataSent", "poweringOffWIB", "WIBOff")
+         self.cleanupChipStates: tuple = ("removingChips", "chipsRemoved")
+         self.resettingStates: tuple = ("waitingToMoveToTray", "movingChipsToTray", "chipsMovedToTray", "placingChipsOnTray", "chipsPlacedOnTray")
+
+         # * List to track the transitions and states the state machine has gone through
+         self.log: list = []
+
+         super().__init__()
+     
      # * The states the system can be in
      # Simple states
      ground = State(initial=True)
@@ -42,8 +70,8 @@ class RTSMachine(StateMachine):
      # Chip moving states
      pickingChips = State()
      chipsPicked = State()
-     movingChipsToTray = State()
-     chipsMovedToTray = State()
+     movingChipsToBoard = State()
+     chipsMovedToBoard = State()
      placingChips = State()
      chipsPlaced = State()
 
@@ -60,6 +88,13 @@ class RTSMachine(StateMachine):
      # Cleanup States
      removingChips = State()
      chipsRemoved = State()
+
+     # Reset States
+     waitingToMoveToTray = State()
+     movingChipsToTray = State()
+     chipsMovedToTray = State()
+     placingChipsOnTray = State()
+     chipsPlacedOnTray = State()
 
      # * Fault states
      curtainTripped = State()
@@ -81,9 +116,9 @@ class RTSMachine(StateMachine):
      # Transtions the state machine between chip moving states
      chip_cycle = (
          pickingChips.to(chipsPicked)
-         | chipsPicked.to(movingChipsToTray)
-         | movingChipsToTray.to(chipsMovedToTray)
-         | chipsMovedToTray.to(placingChips)
+         | chipsPicked.to(movingChipsToBoard)
+         | movingChipsToBoard.to(chipsMovedToBoard)
+         | chipsMovedToBoard.to(placingChips)
          | placingChips.to(chipsPlaced)
          | chipsPlaced.to(pickingChips)
      )
@@ -123,8 +158,8 @@ class RTSMachine(StateMachine):
          | stopped.to(curtainTripped)
          | pickingChips.to(curtainTripped)
          | chipsPicked.to(curtainTripped)
-         | movingChipsToTray.to(curtainTripped)
-         | chipsMovedToTray.to(curtainTripped)
+         | movingChipsToBoard.to(curtainTripped)
+         | chipsMovedToBoard.to(curtainTripped)
          | placingChips.to(curtainTripped)
          | chipsPlaced.to(curtainTripped)
          | poweringOnWIB.to(curtainTripped)
@@ -139,28 +174,21 @@ class RTSMachine(StateMachine):
          | chipsRemoved.to(curtainTripped)
      )
 
-     # Sends the state machine to the stopped state from the curtain tripped state
-     curtain_reset = (
-         curtainTripped.to(stopped)
+     # Sends the state machine from curtain tripped through the resetting states
+     reset_cycle = (
+         curtainTripped.to(waitingToMoveToTray)
+         | waitingToMoveToTray.to(movingChipsToTray)
+         | movingChipsToTray.to(chipsMovedToTray)
+         | chipsMovedToTray.to(placingChipsOnTray)
+         | placingChipsOnTray.to(chipsPlacedOnTray)
+         | chipsPlacedOnTray.to(ground)
+     )
+
+     # Sends the state machine from curtain tripped straight to the ground state
+     straight_reset = (
+         curtainTripped.to(ground)
      )
      
-     def __init__(self):
-         # Tracks if the GUI has been closed
-         self.exists: bool = True
-         # Tracks if a button on the GUI has been pressed
-         self.GUIidle: bool = True
-         # Tracks if a method is in progress from check input
-         self.runningMethodCI = False
-         # Tracks the last non fault state the robot has been in
-         self.lastNFS: str
-         
-         # * Tuples that group states together. Used to have more general checks of state.
-         self.basicStates: tuple = ("ground", "starting", "started", "stopping", "stopped")
-         self.movingChipStates: tuple = ("pickingChips", "chipsPicked", "movingChipsToTray", "chipsMovedToTray", "placingChips", "chipsPlaced")
-         self.testingChipStates: tuple = ("poweringOnWIB", "WIBOn", "testingChips", "chipsTested", "sendingData", "dataSent", "poweringOffWIB", "WIBOff")
-         self.cleanupChipStates: tuple = ("removingChips", "chipsRemoved")
-
-         super().__init__()
 
      def before_cycle(self, event: str, source: State, target: State, message: str = ""):
          message = ". " + message if message else ""
@@ -172,107 +200,168 @@ class RTSMachine(StateMachine):
      # * If that state needs to get input from the robot a thread is created
      def on_enter_ground(self):
          print("In ground state")
-         self.lastNFS = "ground"
+         self.log.append("ground")
+         self.lastNFS = self.current_state
          threading.Thread(target=self.check_input, args=["ground"]).start()
          # // USED FOR DEBUGGING print("Thread checking input")
      
      def on_enter_starting(self):
          print("Robot is starting.")
-         self.lastNFS = "starting"
+         self.log.append("starting")
+         self.lastNFS = self.current_state
          threading.Thread(target=self.check_input, args=["starting"]).start()
          # // USED FOR DEBUGGING print("Thread checking input")
      
      def on_enter_started(self):
          print("Robot is started.")
-         self.lastNFS = "started"
+         self.log.append("started")
+         self.lastNFS = self.current_state
          threading.Thread(target=self.check_input, args=["started"]).start()
          # // USED FOR DEBUGGING print("Thread checking input")
 
      def on_enter_stopping(self):
          print("Robot is stopping.")
-         self.lastNFS = "stopping"
+         self.log.append("stopping")
+         self.lastNFS = self.current_state
          threading.Thread(target=self.check_input, args=["stopping"]).start()
          # // USED FOR DEBUGGING print("Thread checking input")
 
      def on_enter_stopped(self):
          print("Robot is stopped.")
-         self.lastNFS = self.current_state.id
+         self.log.append("stopped")
+         self.lastNFS = self.current_state
+         # // USED FOR DEBUGGING print("Thread checking input")
 
      def on_enter_pickingChips(self):
          print("Robot is picking chips")
-         self.lastNFS = self.current_state.id
+         self.log.append("pickingChips")
+         self.lastNFS = self.current_state
+         self.chipsInArm = True
          threading.Thread(target=self.check_input, args=["pickingChips"]).start()
+         # // USED FOR DEBUGGING print("Thread checking input")
 
      def on_enter_chipsPicked(self):
          print("Robot has picked the chips")
-         self.lastNFS = self.current_state.id
+         self.log.append("chipsPicked")
+         self.lastNFS = self.current_state
          threading.Thread(target=self.check_input, args=["chipsPicked"]).start()
+         # // USED FOR DEBUGGING print("Thread checking input")
 
-     def on_enter_movingChipsToTray(self):
-         print("Robot is moving the chips to the tray")
-         self.lastNFS = self.current_state.id
-         threading.Thread(target=self.check_input, args=["movingChipsToTray"]).start()
+     def on_enter_movingChipsToBoard(self):
+         print("Robot is moving the chips to the board")
+         self.log.append("movingChipsToBoard")
+         self.lastNFS = self.current_state
+         threading.Thread(target=self.check_input, args=["movingChipsToBoard"]).start()
+         # // USED FOR DEBUGGING print("Thread checking input")
 
-     def on_enter_chipsMovedToTray(self):
-         print("Robot has moved the chips to the tray")
-         self.lastNFS = self.current_state.id
-         threading.Thread(target=self.check_input, args=["chipsMovedToTray"]).start()
+     def on_enter_chipsMovedToBoard(self):
+         print("Robot has moved the chips to the board")
+         self.log.append("chipsMovedToBoard")
+         self.lastNFS = self.current_state
+         threading.Thread(target=self.check_input, args=["chipsMovedToBoard"]).start()
+         # // USED FOR DEBUGGING print("Thread checking input")
 
      def on_enter_placingChips(self):
          print("Robot is placing chips on the tray")
-         self.lastNFS = self.current_state.id
+         self.log.append("placingChips")
+         self.lastNFS = self.current_state
          threading.Thread(target=self.check_input, args=["placingChips"]).start()
+         # // USED FOR DEBUGGING print("Thread checking input")
 
      def on_enter_chipsPlaced(self):
          print("Robot has placed the chips on the tray")
-         self.lastNFS = self.current_state.id
+         self.log.append("chipsPlaced")
+         self.lastNFS = self.current_state
+         self.chipsInArm = False
          threading.Thread(target=self.check_input, args=["chipsPlaced"]).start()
+         # // USED FOR DEBUGGING print("Thread checking input")
 
      def on_enter_poweringOnWIB(self):
          print("The WIB is being powered on")
-         self.lastNFS = self.current_state.id
+         self.log.append("poweringOnWIB")
+         self.lastNFS = self.current_state
 
      def on_enter_WIBOn(self):
          print("The WIB has been powered on")
-         self.lastNFS = self.current_state.id
+         self.log.append("WIBOn")
+         self.lastNFS = self.current_state
 
      def on_enter_testingChips(self):
          print("The chips are being tested")
-         self.lastNFS = self.current_state.id
+         self.log.append("testingChips")
+         self.lastNFS = self.current_state
 
      def on_enter_chipsTested(self):
          print("The chips have been tested")
-         self.lastNFS = self.current_state.id
+         self.log.append("chipsTested")
+         self.lastNFS = self.current_state
 
      def on_enter_sendingData(self):
          print("The test data is being sent")
-         self.lastNFS = self.current_state.id
+         self.log.append("sendingData")
+         self.lastNFS = self.current_state
 
      def on_enter_dataSent(self):
          print("The testing data has been sent")
-         self.lastNFS = self.current_state.id
+         self.log.append("dataSent")
+         self.lastNFS = self.current_state
 
      def on_enter_poweringOffWIB(self):
          print("The WIB is being powered off")
-         self.lastNFS = self.current_state.id
+         self.log.append("poweringOffWIB")
+         self.lastNFS = self.current_state
          
      def on_enter_WIBOff(self):
          print("The WIB has been powered off")
-         self.lastNFS = self.current_state.id
+         self.log.append("WIBOff")
+         self.lastNFS = self.current_state
 
      def on_enter_removingChips(self):
          print("The chips are being removed")
-         self.lastNFS = self.current_state.id
+         self.log.append("removingChips")
+         self.lastNFS = self.current_state
 
      def on_enter_chipsRemoved(self):
          print("The chips have been removed")
-         self.lastNFS = self.current_state.id
+         self.log.append("chipsRemoved")
+         self.lastNFS = self.current_state
+
+     def on_enter_waitingToMoveToTray(self):
+         print("Waiting to move chips back to tray")
+         self.lastNFS = self.current_state
+         self.log.append("waitingToMoveToTray")
+         threading.Thread(target=self.check_input, args=["waitingToMoveToTray"]).start()
+
+     def on_enter_movingChipsToTray(self):
+         print("Moving chips back to tray")
+         self.lastNFS = self.current_state
+         self.log.append("movingChipsToTray")
+         threading.Thread(target=self.check_input, args=["movingChipsToTray"]).start()
+
+     def on_enter_chipsMovedToTray(self):
+         print("Chips have been moved back to tray")
+         self.lastNFS = self.current_state
+         self.log.append("chipsMovedToTray")
+         threading.Thread(target=self.check_input, args=["chipsMovedToTray"]).start()
+
+     def on_enter_placingChipsOnTray(self):
+         print("Placing chips back on tray")
+         self.lastNFS = self.current_state
+         self.log.append("placingChipsOnTray")
+         threading.Thread(target=self.check_input, args=["placingChipsOnTray"]).start()
+
+     def on_enter_chipsPlacedOnTray(self):
+         print("Chips have been placed back on tray")
+         self.lastNFS = self.current_state
+         self.log.append("chipsPlacedOnTray")
+         threading.Thread(target=self.check_input, args=["chipsPlacedOnTray"]).start()
+         self.chipsInArm = False
 
      def on_enter_curtainTripped(self):
          print("LIGHT CURTAIN HAS BEEN TRIPPED")
-         threading.Thread(target=self.check_input, args=["curtainTripped"]).start()
-         # // USED FOR DEBUGGING print("Thread checking input")
+         self.log.append("curtainTripped")
 
+     # * Method called automatically when the state machine exits the state it specifies
      def on_exit_curtainTripped(self):
          print("Light curtain has been reset")
 
@@ -298,7 +387,6 @@ class RTSMachine(StateMachine):
                         f.seek(0)
                     
                     last_line = f.readline().decode()
-                    # // USED FOR DEBUGGING print(f"Last line is {last_line}")
 
                     # * Will change the state according to the last line of the file
                     # * Won't run anything that calls cycle if currently cycling due to input from the GUI. Achieved by GUIidle check.
@@ -315,24 +403,30 @@ class RTSMachine(StateMachine):
                     elif (last_line.rstrip() == "stopping") & (self.GUIidle) & (not self.runningMethodCI):
                         self.runningMethodCI = True
                         self.startStopping()
-                    elif (last_line.rstrip() in self.basicStates) & (self.GUIidle) & (not self.runningMethodCI):
+                    elif (last_line.rstrip() == "ground") & (self.GUIidle) & (not self.runningMethodCI):
                         self.runningMethodCI = True
-                        self.basicCycle()
+                        self.goToGround()
                     elif (last_line.rstrip() == "pickingChips") & (self.GUIidle) & (not self.runningMethodCI):
                         self.runningMethodCI = True
                         self.beginChipMoving()
-                    elif (last_line.rstrip() != self.lastNFS) & (last_line.rstrip() in self.movingChipStates) & (self.current_state.id in self.movingChipStates) & (self.GUIidle) & (not self.runningMethodCI):
+                    elif (last_line.rstrip() != self.lastNFS.id) & (last_line.rstrip() in self.movingChipStates) & (self.current_state.id in self.movingChipStates) & (self.GUIidle) & (not self.runningMethodCI):
                         self.runningMethodCI = True
                         self.cycleChipMoving()
                     elif (last_line.rstrip() == "poweringOnWIB") & (self.GUIidle) & (not self.runningMethodCI):
                         self.runningMethodCI = True
                         self.beginChipTesting()
-                    elif (last_line.rstrip() == "curtainTripped") & (not self.runningMethodCI):
+                    elif (last_line.rstrip() != self.lastNFS.id) & (last_line.rstrip() in self.resettingStates) & (self.current_state.id in self.resettingStates) & (self.GUIidle) & (not self.runningMethodCI):
+                        self.runningMethodCI = True
+                        self.cycleResetting()
+                    elif (last_line.rstrip() == "curtainTripped") & (self.GUIidle) & (not self.runningMethodCI):
                         self.runningMethodCI = True
                         self.tripCurtain()
-                    elif (last_line.rstrip() == "curtainReset") & (not self.runningMethodCI):
+                    elif (last_line.rstrip() == "curtainReset") & (self.GUIidle) & (not self.runningMethodCI):
                         self.runningMethodCI = True
                         self.resetCurtain()
+                    elif (last_line.rstrip() == "curtainContinue") & (self.GUIidle) & (not self.runningMethodCI):
+                        self.curtainContinue()
+
                     time.sleep(1)
                     f.close()
          else:
@@ -342,10 +436,13 @@ class RTSMachine(StateMachine):
      # * Cycles to the stopping state
      def startStopping(self):
          if self.current_state.id == "started":
+             self.log.append("cycle")
              self.cycle()
              # // USED FOR DEBUGGING print("Cycled once from file")
          elif self.current_state.id == "starting":
+             self.log.append("cycle")
              self.cycle()
+             self.log.append("cycle")
              self.cycle()
              # // USED FOR DEBUGGING print("Cycled twice from file")
          
@@ -355,15 +452,21 @@ class RTSMachine(StateMachine):
      # * Cycles to the stopped state
      def stop(self):
          if self.current_state.id == "started":
+             self.log.append("cycle")
              self.cycle()
+             self.log.append("cycle")
              self.cycle()
              # // USED FOR DEBUGGING print("Cycled twice from file")
          elif self.current_state.id == "stopping":
+             self.log.append("cycle")
              self.cycle()
              # // USED FOR DEBUGGING print("Cycled once from file")
          elif self.current_state.id == "starting":
+             self.log.append("cycle")
              self.cycle()
+             self.log.append("cycle")
              self.cycle()
+             self.log.append("cycle")
              self.cycle()
              # // USED FOR DEBUGGING print("Cycled three times from file")
 
@@ -373,6 +476,7 @@ class RTSMachine(StateMachine):
      # * Cycles to the starting state
      def beginStarting(self):
          if (self.current_state.id == "stopped") | (self.current_state.id == "ground"):
+             self.log.append("cycle")
              self.cycle()
              # // USED FOR DEBUGGING print("Cycled once from file")
 
@@ -382,42 +486,82 @@ class RTSMachine(StateMachine):
      # * Cycles to the started state
      def start(self):
          if (self.current_state.id == "starting"):
+             self.log.append("cycle")
              self.cycle()
              # // USED FOR DEBUGGING print("Cycled once from file")
          elif (self.current_state.id == "ground"):
+             self.log.append("cycle")
              self.cycle()
+             self.log.append("cycle")
              self.cycle()
              # // USED FOR DEBUGGING print("Cycled twice from file")
 
          # * Allows check input methods to be run again
          self.runningMethodCI = False
 
+     # * Goes from chipsPlacedOnTray, the last resetting state, to ground, the first basic state
+     def goToGround(self):
+         if (self.current_state.id == "chipsPlacedOnTray"):
+            self.log.append("reset_cycle")
+            self.reset_cycle()
+
+         self.runningMethodCI = False
+
+     # * Switches from started to pickingChips, the first chip moving state
      def beginChipMoving(self):
          if self.current_state.id == "started":
+            self.log.append("begin_chip_moving")
             self.begin_chip_moving()
          
          self.runningMethodCI = False
 
+     # * Moves between the chips moving states
      def cycleChipMoving(self):
+         self.log.append("chip_cycle")
          self.chip_cycle()
          self.runningMethodCI = False
 
+     # * Switches from chipsPlaced to the poweringOnWIB, the first testing state
      def beginChipTesting(self):
          if self.current_state.id == "chipsPlaced":
+             self.log.append("begin_testing")
              self.begin_testing()
+
+     # * Cycles between the reset states
+     def cycleResetting(self):
+         self.log.append("reset_cycle")
+         self.reset_cycle()
+         self.runningMethodCI = False
 
      # * Transitions from any state to curtainTripped
      def tripCurtain(self):
-         if(self.current_state.id != "curtainTripped"):
+         if(self.current_state.id != "curtainTripped") & (self.current_state.id != "ground"):
+             self.log.append("curtain_tripped")
              self.curtain_tripped()
          
          # * Allows check input methods to be run again
          self.runningMethodCI = False
 
-     # * Transitions from curtainTripped to curtainReset
+     # * Transitions from curtainTripped to stopped
      def resetCurtain(self):
          if(self.current_state.id == "curtainTripped"):
-             self.curtain_reset()
+             if self.chipsInArm:
+                 self.log.append("reset_cycle")
+                 self.reset_cycle()
+             else:
+                 self.log.append("straight_reset")
+                 self.straight_reset()
+         
+         self.runningMethodCI = False
+
+     # * Transtions from curtainTripped to the last non fault state
+     def curtainContinue(self):
+         if self.current_state.id == "curtainTripped":
+            self.current_state = self.lastNFS
+            self.on_exit_curtainTripped()
+            self.log.append("curtain_continue")
+            self.log.append(self.lastNFS.id)
+            threading.Thread(target=self.check_input, args=[self.lastNFS.id]).start()
          
          # * Allows check input methods to be run again
          self.runningMethodCI = False

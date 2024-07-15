@@ -9,6 +9,14 @@ import threading
 # * Creates a user interface that displays the current state and has buttons to start and stop the robot
 # * Must be passed a RTS state machine
 
+# * GUI Elements:
+# label: Text that displays the state or type of state
+# frame: Holds the buttons
+# startbtn: Button that changes the state to started
+# stopbtn: Button that changes the state to stopped
+# ctnbtn: Button that is shown when the curtain is tripped. Sends the state machine back to the last non fault state
+# resetbtn: Button that is shown when the curtain is tripped. Sends the state machine into the waitingToMoveToTray state.
+
 # * Methods:
 # __init__: Creates the GUI in its inital state with start and stop button and label to display current state.
 # Runs check state in seperate thread to consitantly update the GUI
@@ -30,6 +38,7 @@ class GUI:
      def __init__(self, sm: RTSSM.RTSMachine) -> None:       
           self.sm: RTSSM.RTSMachine = sm
           self.flag = True
+          self.count: int = 0
 
           # Creating window
           self.root: tk.Tk = tk.Tk()
@@ -58,6 +67,15 @@ class GUI:
           # * Calls the stop_robot() method
           self.stopbtn: tk.Button = tk.Button(self.frame, bg="red", text="Stop", font=('Helvetica', 18), command=self.stop_robot)
           self.stopbtn.grid(row=0, column=1, padx=10, pady=10)
+
+          self.ctnbtn: tk.Button = tk.Button(self.root, bg="grey", text="Continue", font=('Helvetica', 18), command=self.ctn)
+          self.ctnbtn.pack(pady=10)
+
+          self.resetbtn: tk.Button = tk.Button(self.root, bg="grey", text="Reset", font=('Helvetica', 18), command=self.reset)
+          self.resetbtn.pack(pady=10)
+
+          self.ctnbtn.pack_forget()
+          self.resetbtn.pack_forget()
 
           # Create a new thread where the gui will constantly check the state
           t1 = threading.Thread(target=self.check_state)
@@ -125,7 +143,7 @@ class GUI:
     
     # * Changes label text and color to correspond to the current state
      def update_label(self):
-          if (self.sm.current_state.id == "starting") | (self.sm.current_state.id == "started"):
+          if (self.sm.current_state.id == "starting") | (self.sm.current_state.id == "started") | (self.sm.current_state.id == "ground"):
                self.label.config(text="Current State: " + self.sm.current_state.id, fg="#4C8C2B")
                self.root.update()
           elif self.sm.current_state.id == "stopping":
@@ -143,39 +161,61 @@ class GUI:
           elif self.sm.current_state.id in self.sm.testingChipStates:
                self.label.config(text="Testing Chips", fg="#4C8C2B")
                self.root.update()
+          elif self.sm.current_state.id in self.sm.resettingStates:
+               self.label.config(text="Resetting Arm", fg="#CB6015")
+               self.root.update()
           else:
                self.stopbtn: tk.Button = tk.Button(self.frame, bg="#FF0000", text="Stop", font=('Arial', 18), command=self.stop_robot)
                self.stopbtn.grid(row=0, column=1, padx=10, pady=10)
 
-     # * Changes the state and color of the buttons based on the state of the state machine to prevent them from being pressed at the wrong times
+     # * Changes the state, color, and visibility of buttons based on the state of the state machine to prevent them from being pressed at the wrong times
      def update_buttons(self):
-          if(self.sm.current_state.id == "ground"):
+          if(self.sm.current_state.id == "curtainTripped"):
+               self.startbtn["state"] = "disabled"
+               self.startbtn.config(bg="#FAF9F6")
+
+               self.stopbtn["state"] = "disabled"
+               self.stopbtn.config(bg="#FAF9F6")
+
+               self.ctnbtn.pack()
+               self.resetbtn.pack()
+
+          elif(self.sm.current_state.id == "ground"):
                self.startbtn["state"] = "normal"
                self.startbtn.config(bg="#4C8C2B")
 
                self.stopbtn["state"] = "disabled"
                self.stopbtn.config(bg="#FAF9F6")
 
-          if(self.sm.current_state.id == "starting") | (self.sm.current_state.id == "started")  | (self.sm.current_state.id in self.sm.movingChipStates) | (self.sm.current_state.id in self.sm.testingChipStates):
+               self.ctnbtn.pack_forget()
+               self.resetbtn.pack_forget()
+          elif(self.sm.current_state.id == "starting") | (self.sm.current_state.id == "started")  | (self.sm.current_state.id in self.sm.movingChipStates) | (self.sm.current_state.id in self.sm.testingChipStates):
                self.startbtn["state"] = "disabled"
                self.startbtn.config(bg="#FAF9F6")
 
                self.stopbtn["state"] = "normal"
                self.stopbtn.config(bg="red")
 
-          if (self.sm.current_state.id == "stopped"):
+               self.ctnbtn.pack_forget()
+               self.resetbtn.pack_forget()
+          elif (self.sm.current_state.id == "stopped"):
                self.startbtn["state"] = "normal"
                self.startbtn.config(bg="#4C8C2B")
 
                self.stopbtn["state"] = "disabled"
                self.stopbtn.config(bg="#FAF9F6")
-
-          if (self.sm.current_state.id == "stopping") | (self.sm.current_state.id == "curtainTripped"):
+               
+               self.ctnbtn.pack_forget()
+               self.resetbtn.pack_forget()
+          elif (self.sm.current_state.id == "stopping") | (self.sm.current_state.id in self.sm.resettingStates):
                self.startbtn["state"] = "disabled"
                self.startbtn.config(bg="#FAF9F6")
 
                self.stopbtn["state"] = "disabled"
                self.stopbtn.config(bg="#FAF9F6")
+               
+               self.ctnbtn.pack_forget()
+               self.resetbtn.pack_forget()
 
      # * Sets the background to orange if in a fault state and resets it if not
      def update_background(self):
@@ -184,14 +224,27 @@ class GUI:
                self.frame.config(bg="#FAF9F6")
                self.label.config(bg="#FAF9F6")
                self.root.update()
-               messagebox.showerror(message="Light Curtain Tripped", detail="The area around the robot must be cleared. Then you can reset it by pressing the small red square button on the control pannel. Then press OK.")
-          if(self.sm.current_state.id == "stopped"):
+               if self.count < 1:
+                    messagebox.showerror(message="Light Curtain Tripped", detail="The area around the robot must be cleared. Then you can reset it by pressing the small red square button on the control pannel. Then press OK.")
+                    self.count += 1
+          else:
                self.root.config(bg="#99D6EA")
                self.frame.config(bg="lightblue")
                self.label.config(bg="lightblue")
+               self.count = 0
 
+     def ctn(self):
+          self.sm.GUIidle = False
+          self.sm.curtainContinue()
+          self.sm.GUIidle = True
+
+     def reset(self):
+          self.sm.GUIidle = False
+          self.sm.resetCurtain()
+          self.sm.GUIidle = True
 
      # * Cyles the state machine and updates the label
      def cycle(self):
+          self.sm.log.append("cycle") 
           self.sm.cycle()
           self.update_label()
