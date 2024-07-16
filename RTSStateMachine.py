@@ -331,6 +331,7 @@ class RTSMachine(StateMachine):
          self.lastNFS = self.current_state
          self.log.append("waitingToMoveToTray")
          threading.Thread(target=self.check_input, args=["waitingToMoveToTray"]).start()
+         print("Thread started")
 
      def on_enter_movingChipsToTray(self):
          print("Moving chips back to tray")
@@ -535,7 +536,7 @@ class RTSMachine(StateMachine):
 
      # * Transitions from any state to curtainTripped
      def tripCurtain(self):
-         if(self.current_state.id != "curtainTripped") & (self.current_state.id != "ground"):
+         if(self.current_state.id != "curtainTripped") & (self.current_state.id != "ground") & (self.current_state.id != "waitingToMoveToTray"):
              self.log.append("curtain_tripped")
              self.curtain_tripped()
          
