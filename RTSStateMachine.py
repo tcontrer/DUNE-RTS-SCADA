@@ -50,7 +50,7 @@ class RTSMachine(StateMachine):
          # * Tuples that group states together. Used to have more general checks of state.
          self.basicStates: tuple = ("ground", "starting", "started", "stopping", "stopped")
          self.movingChipStates: tuple = ("pickingChips", "chipsPicked", "movingChipsToBoard", "chipsMovedToBoard", "placingChips", "chipsPlaced")
-         self.testingChipStates: tuple = ("poweringOnWIB", "WIBOn", "testingChips", "chipsTested", "sendingData", "dataSent", "poweringOffWIB", "WIBOff")
+         self.testingChipStates: tuple = ("poweringOnWIB", "WIBOn", "testingChips", "chipsTested", "reviewingResults", "resultsReviewed", "sendingData", "dataSent", "poweringOffWIB", "WIBOff")
          self.cleanupChipStates: tuple = ("removingChips", "chipsRemoved")
          self.resettingStates: tuple = ("waitingToMoveToTray", "movingChipsToTray", "chipsMovedToTray", "placingChipsOnTray", "chipsPlacedOnTray")
 
@@ -80,6 +80,8 @@ class RTSMachine(StateMachine):
      WIBOn = State()
      testingChips = State()
      chipsTested = State()
+     reviewingResults = State()
+     resultsReviewed = State()
      sendingData = State()
      dataSent = State()
      poweringOffWIB = State()
@@ -133,10 +135,16 @@ class RTSMachine(StateMachine):
          poweringOnWIB.to(WIBOn)
          | WIBOn.to(testingChips)
          | testingChips.to(chipsTested)
-         | chipsTested.to(sendingData)
+         | chipsTested.to(reviewingResults)
+         | reviewingResults.to(resultsReviewed)
+         | resultsReviewed.to(sendingData)
          | sendingData.to(dataSent)
          | dataSent.to(poweringOffWIB)
          | poweringOffWIB.to(WIBOff)
+     )
+
+     retest = (
+         resultsReviewed.to(testingChips)
      )
 
      # Transitions the state machine to cleanup states

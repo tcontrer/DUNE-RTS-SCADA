@@ -89,6 +89,10 @@ class GUI:
 
           self.toChipsTested: tk.Button = tk.Button(self.frame, bg="#4C8C2B", text="To Chips Tested", font=('Helvetica', 18), command=self.chipsTested)
 
+          self.toReviewingResults: tk.Button = tk.Button(self.frame, bg="#4C8C2B", text="To Reviewing Results", font=('Helvetica', 18), command=self.reviewingResults)
+
+          self.toResultsReviewed: tk.Button = tk.Button(self.frame, bg="#4C8C2B", text="To Results Reviewed", font=('Helvetica', 18), command=self.resultsReviewed)
+
           self.toSendingData: tk.Button = tk.Button(self.frame, bg="#4C8C2B", text="To Sending Data", font=('Helvetica', 18), command=self.sendingData)
 
           self.toDataSent: tk.Button = tk.Button(self.frame, bg="#4C8C2B", text="To Data Sent", font=('Helvetica', 18), command=self.dataSent)
@@ -102,6 +106,14 @@ class GUI:
           self.toChipsRemoved: tk.Button = tk.Button(self.frame, bg="#4C8C2B", text="To Chips Removed", font=('Helvetica', 18), command=self.chipsRemoved)
 
           self.toGround: tk.Button = tk.Button(self.frame, bg="#4C8C2B", text="To Ground", font=('Helvetica', 18), command=self.ground)
+
+          self.toMovingChipsToTray: tk.Button = tk.Button(self.frame, bg="#4C8C2B", text="To Moving Chips To Tray", font=('Helvetica', 18), command=self.resetCycle)
+
+          self.toChipsMovedToTray: tk.Button = tk.Button(self.frame, bg="#4C8C2B", text="To Chips Moved To Tray", font=('Helvetica', 18), command=self.resetCycle)
+
+          self.toPlacingChipsOnTray: tk.Button = tk.Button(self.frame, bg="#4C8C2B", text="To Placing Chips On Tray", font=('Helvetica', 18), command=self.resetCycle)
+
+          self.toChipsPlacedOnTray: tk.Button = tk.Button(self.frame, bg="#4C8C2B", text="To Chips Placed On Tray", font=('Helvetica', 18), command=self.resetCycle)
 
           self.toBlankBtns: tuple = (self.toStarting, self.toStarted, self.toPickingChips, self.toChipsPicked, self.toMovingChipsToBoard, self.toChipsMovedToBoard, self.toPlacingChips, self.toChipsPlaced, self.toPoweringOnWIB, self.toWIBOn, self.toTestingChips, self.toChipsTested, self.toSendingData, self.toDataSent, self.toPoweringOffWIB, self.toWIBOff, self.toRemovingChips, self.toChipsRemoved, self.toGround)
 
@@ -284,6 +296,7 @@ class GUI:
                self.stopbtn.config(bg="red")
 
                self.toTestingChips.pack_forget()
+               self.toSendingData.pack_forget()
                self.toChipsTested.pack()
 
                self.ctnbtn.pack_forget()
@@ -293,7 +306,26 @@ class GUI:
                self.stopbtn.config(bg="red")
 
                self.toChipsTested.pack_forget()
+               self.toReviewingResults.pack()
+
+               self.ctnbtn.pack_forget()
+               self.resetbtn.pack_forget()
+          elif(self.sm.current_state.id == "reviewingResults"):
+               self.stopbtn["state"] = "normal"
+               self.stopbtn.config(bg="red")
+
+               self.toReviewingResults.pack_forget()
+               self.toResultsReviewed.pack()
+
+               self.ctnbtn.pack_forget()
+               self.resetbtn.pack_forget()
+          elif(self.sm.current_state.id == "resultsReviewed"):
+               self.stopbtn["state"] = "normal"
+               self.stopbtn.config(bg="red")
+
+               self.toResultsReviewed.pack_forget()
                self.toSendingData.pack()
+               self.toTestingChips.pack()
 
                self.ctnbtn.pack_forget()
                self.resetbtn.pack_forget()
@@ -302,6 +334,7 @@ class GUI:
                self.stopbtn.config(bg="red")
 
                self.toSendingData.pack_forget()
+               self.toTestingChips.pack_forget()
                self.toDataSent.pack()
 
                self.ctnbtn.pack_forget()
@@ -347,6 +380,50 @@ class GUI:
                self.stopbtn.config(bg="red")
 
                self.toChipsRemoved.pack_forget()
+               self.toGround.pack()
+
+               self.ctnbtn.pack_forget()
+               self.resetbtn.pack_forget()
+          elif(self.sm.current_state.id == "waitingToMoveToTray"):
+               self.stopbtn["state"] = "normal"
+               self.stopbtn.config(bg="red")
+
+               self.ctnbtn.pack_forget()
+               self.resetbtn.pack_forget()
+
+               self.toMovingChipsToTray.pack()
+          elif(self.sm.current_state.id == "movingChipsToTray"):
+               self.stopbtn["state"] = "normal"
+               self.stopbtn.config(bg="red")
+
+               self.toMovingChipsToTray.pack_forget()
+               self.toChipsMovedToTray.pack()
+
+               self.ctnbtn.pack_forget()
+               self.resetbtn.pack_forget()
+          elif(self.sm.current_state.id == "chipsMovedToTray"):
+               self.stopbtn["state"] = "normal"
+               self.stopbtn.config(bg="red")
+
+               self.toChipsMovedToTray.pack_forget()
+               self.toPlacingChipsOnTray.pack()
+
+               self.ctnbtn.pack_forget()
+               self.resetbtn.pack_forget()
+          elif(self.sm.current_state.id == "placingChipsOnTray"):
+               self.stopbtn["state"] = "normal"
+               self.stopbtn.config(bg="red")
+
+               self.toPlacingChipsOnTray.pack_forget()
+               self.toChipsPlacedOnTray.pack()
+
+               self.ctnbtn.pack_forget()
+               self.resetbtn.pack_forget()
+          elif(self.sm.current_state.id == "chipsPlacedOnTray"):
+               self.stopbtn["state"] = "normal"
+               self.stopbtn.config(bg="red")
+
+               self.toChipsPlacedOnTray.pack_forget()
                self.toGround.pack()
 
                self.ctnbtn.pack_forget()
@@ -463,6 +540,8 @@ class GUI:
           self.sm.GUIidle = False
           if(self.sm.current_state.id == "WIBOn"):
                self.sm.test_cycle()
+          elif(self.sm.current_state.id == "resultsReviewed"):
+               self.sm.retest()
           self.sm.GUIidle = True
 
      def chipsTested(self):
@@ -471,9 +550,21 @@ class GUI:
                self.sm.test_cycle()
           self.sm.GUIidle = True
 
-     def sendingData(self):
+     def reviewingResults(self):
           self.sm.GUIidle = False
           if(self.sm.current_state.id == "chipsTested"):
+               self.sm.test_cycle()
+          self.sm.GUIidle = True
+     
+     def resultsReviewed(self):
+          self.sm.GUIidle = False
+          if(self.sm.current_state.id == "reviewingResults"):
+               self.sm.test_cycle()
+          self.sm.GUIidle = True
+
+     def sendingData(self):
+          self.sm.GUIidle = False
+          if(self.sm.current_state.id == "resultsReviewed"):
                self.sm.test_cycle()
           self.sm.GUIidle = True
 
@@ -511,6 +602,14 @@ class GUI:
           self.sm.GUIidle = False
           if(self.sm.current_state.id == "chipsRemoved"):
                self.sm.done()
+          elif(self.sm.current_state.id == "chipsPlacedOnTray"):
+               self.sm.reset_cycle()
+          self.sm.GUIidle = True
+
+     def resetCycle(self):
+          self.sm.GUIidle = False
+          if(self.sm.current_state.id in self.sm.resettingStates):
+               self.sm.reset_cycle()
           self.sm.GUIidle = True
 
      def ctn(self):
