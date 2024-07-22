@@ -149,6 +149,10 @@ class RTSMachine(StateMachine):
          removingChips.to(chipsRemoved)
      )
 
+     done = (
+         chipsRemoved.to(ground)
+     )
+
      # Sends the state machine right to the curtain tripped state
      curtain_tripped = (
          ground.to(curtainTripped)
@@ -428,7 +432,7 @@ class RTSMachine(StateMachine):
                     elif (last_line.rstrip() == "curtainContinue") & (self.GUIidle) & (not self.runningMethodCI):
                         self.curtainContinue()
 
-                    time.sleep(1)
+                    time.sleep(.5)
                     f.close()
          else:
              print("File does not exist")
