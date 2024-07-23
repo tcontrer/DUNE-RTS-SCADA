@@ -3,6 +3,8 @@ import time
 import threading
 import os
 
+import checkInputMethods
+
 # * A state machine to manage the movement of the RTS arm in correspondence with input from the robot
 
 # * Transitions:
@@ -24,8 +26,10 @@ import os
 # * Methods:
 # on_enter_NAMEOFSTATE: Automatically called when NAMEOFSTATE is entered. Print the state to the terminal and update lastNFS
 # checkInput: Checks the last line of a file every second and responds based on what that line is. The file is written 
-# from within the RTS software. Provides a connection between the RTS and the state machine.
-# methods under checkInput: They are called from within check input and cycle the state machine based on its current state
+# from within the RTS software. Provides a connection between the RTS and the state machine. Calls methods from within checkInputMethods.py
+# resetCurtain: Transitions the state machine from curtainTripped to the resetting states if their could be chips on the arm
+# or straight to ground if there is no possiblity of chips being on the RTS's arm.
+# curtainContinue: Transitions the state machine from curtainTripped to the last non fault state.
 
 # * Variables:
 # exists: boolean that is true until the GUI is closed. Used to properly shut down the state machine
@@ -435,203 +439,35 @@ class RTSMachine(StateMachine):
 
      # * Method that reads a file written by the robot and updates the state if needed
      # * Must be passed the state at the time of method call so it can stop once the state is changed
+     # * Runs methods from within checkInputMethods.py
      def check_input(self, state: str):
-         
-         # * Path name for file being read
-         # ! Must be updated for different machines and file names
-         path: str = '/Users/volson/Desktop/robotState.txt'
-         
-         if os.path.isfile(path):
-            # Once GUI is closed or state transitions loop stops
-            while (self.exists) & (self.current_state.id == state):
-                # Reads only the last line of the file and sets the state based on that line
-                with open(path, 'rb') as f:
-                    try:  # Catch OSError in case of a one line file 
-                        f.seek(-2, os.SEEK_END)
-                        while f.read(1) != b'\n':
-                            f.seek(-2, os.SEEK_CUR)
-                    except OSError:
-                        f.seek(0)
-                    
-                    last_line = f.readline().decode()
+        # Once GUI is closed or state transitions loop stops
+        while (self.exists) & (self.current_state.id == state):
+            last_line: str = checkInputMethods.readFile()
+            if(last_line != None):
+                checkInputMethods.updateStateMachine(self, last_line)
 
-                    # * Will change the state according to the last line of the file
-                    # * Won't run anything that calls cycle if currently cycling due to input from the GUI. Achieved by GUIidle check.
-                    # * Won't run if one of these methods is already being run to prevent accidently cycling. Achieved by runningMethodCI check.
-                    if (last_line.rstrip() == "stopped") & (self.GUIidle) & (not self.runningMethodCI):
-                        self.runningMethodCI = True
-                        self.stop() 
-                    elif (last_line.rstrip() == "starting") & (self.GUIidle) & (not self.runningMethodCI):
-                        self.runningMethodCI = True
-                        self.beginStarting()
-                    elif (last_line.rstrip() == "started") & (self.GUIidle) & (not self.runningMethodCI):
-                        self.runningMethodCI = True
-                        self.start()
-                    elif (last_line.rstrip() == "stopping") & (self.GUIidle) & (not self.runningMethodCI):
-                        self.runningMethodCI = True
-                        self.startStopping()
-                    elif (last_line.rstrip() == "ground") & (self.GUIidle) & (not self.runningMethodCI):
-                        self.runningMethodCI = True
-                        self.goToGround()
-                    elif (last_line.rstrip() == "pickingChips") & (self.GUIidle) & (not self.runningMethodCI):
-                        self.runningMethodCI = True
-                        self.beginChipMoving()
-                    elif (self.current_state.id in self.movingChipStates) & (last_line.rstrip() in self.movingChipStates):
-                        if ((self.movingChipStates.index(self.current_state.id) + 1) == self.movingChipStates.index(last_line)) & (self.GUIidle) & (not self.runningMethodCI):
-                            self.runningMethodCI = True
-                            self.cycleChipMoving()
-                    elif (last_line.rstrip() == "poweringOnWIB") & (self.GUIidle) & (not self.runningMethodCI):
-                        self.runningMethodCI = True
-                        self.beginChipTesting()
-                    elif (self.current_state.id in self.resettingStates) & (last_line.rstrip() in self.resettingStates):
-                        if ((self.resettingStates.index(self.current_state.id) + 1) == self.resettingStates.index(last_line)) & (self.GUIidle) & (not self.runningMethodCI):
-                            self.runningMethodCI = True
-                            print("Running Reset Cycle from file reading")
-                            self.cycleResetting()
-                    elif (last_line.rstrip() == "curtainTripped") & (self.GUIidle) & (not self.runningMethodCI):
-                        self.runningMethodCI = True
-                        self.tripCurtain()
-                    elif (last_line.rstrip() == "curtainReset") & (self.GUIidle) & (not self.runningMethodCI):
-                        self.runningMethodCI = True
-                        self.resetCurtain()
-                    elif (last_line.rstrip() == "curtainContinue") & (self.GUIidle) & (not self.runningMethodCI):
-                        self.curtainContinue()
+            time.sleep(.5)
 
-                    time.sleep(.5)
-                    f.close()
-         else:
-             print("File does not exist")
-
-     # * Next methods are called from within checkInput()
-     # * Cycles to the stopping state
-     def startStopping(self):
-         if self.current_state.id == "started":
-             self.log.append("cycle")
-             self.cycle()
-             # // USED FOR DEBUGGING print("Cycled once from file")
-         elif self.current_state.id == "starting":
-             self.log.append("cycle")
-             self.cycle()
-             self.log.append("cycle")
-             self.cycle()
-             # // USED FOR DEBUGGING print("Cycled twice from file")
-         
-         # * Allows check input methods to be run again
-         self.runningMethodCI = False
-
-     # * Cycles to the stopped state
-     def stop(self):
-         if self.current_state.id == "started":
-             self.log.append("cycle")
-             self.cycle()
-             self.log.append("cycle")
-             self.cycle()
-             # // USED FOR DEBUGGING print("Cycled twice from file")
-         elif self.current_state.id == "stopping":
-             self.log.append("cycle")
-             self.cycle()
-             # // USED FOR DEBUGGING print("Cycled once from file")
-         elif self.current_state.id == "starting":
-             self.log.append("cycle")
-             self.cycle()
-             self.log.append("cycle")
-             self.cycle()
-             self.log.append("cycle")
-             self.cycle()
-             # // USED FOR DEBUGGING print("Cycled three times from file")
-
-         # * Allows check input methods to be run again
-         self.runningMethodCI = False
-
-     # * Cycles to the starting state
-     def beginStarting(self):
-         if (self.current_state.id == "stopped") | (self.current_state.id == "ground"):
-             self.log.append("cycle")
-             self.cycle()
-             # // USED FOR DEBUGGING print("Cycled once from file")
-
-         # * Allows check input methods to be run again
-         self.runningMethodCI = False
-    
-     # * Cycles to the started state
-     def start(self):
-         if (self.current_state.id == "starting"):
-             self.log.append("cycle")
-             self.cycle()
-             # // USED FOR DEBUGGING print("Cycled once from file")
-         elif (self.current_state.id == "ground"):
-             self.log.append("cycle")
-             self.cycle()
-             self.log.append("cycle")
-             self.cycle()
-             # // USED FOR DEBUGGING print("Cycled twice from file")
-
-         # * Allows check input methods to be run again
-         self.runningMethodCI = False
-
-     # * Goes from chipsPlacedOnTray, the last resetting state, to ground, the first basic state
-     def goToGround(self):
-         if (self.current_state.id == "chipsPlacedOnTray"):
-            self.log.append("reset_cycle")
-            self.reset_cycle()
-
-         self.runningMethodCI = False
-
-     # * Switches from started to pickingChips, the first chip moving state
-     def beginChipMoving(self):
-         if self.current_state.id == "started":
-            self.log.append("begin_chip_moving")
-            self.begin_chip_moving()
-         
-         self.runningMethodCI = False
-
-     # * Moves between the chips moving states
-     def cycleChipMoving(self):
-         self.log.append("chip_cycle")
-         self.chip_cycle()
-         self.runningMethodCI = False
-
-     # * Switches from chipsPlaced to the poweringOnWIB, the first testing state
-     def beginChipTesting(self):
-         if self.current_state.id == "chipsPlaced":
-             self.log.append("begin_testing")
-             self.begin_testing()
-
-     # * Cycles between the reset states
-     def cycleResetting(self):
-         self.log.append("reset_cycle")
-         self.reset_cycle()
-         self.runningMethodCI = False
-
-     # * Transitions from any state to curtainTripped
-     def tripCurtain(self):
-         if(self.current_state.id != "curtainTripped") & (self.current_state.id != "ground"):
-             self.log.append("curtain_tripped")
-             self.curtain_tripped()
-         
-         # * Allows check input methods to be run again
-         self.runningMethodCI = False
-
-     # * Transitions from curtainTripped to stopped
-     def resetCurtain(self):
-         if(self.current_state.id == "curtainTripped"):
-             if self.chipsInArm:
-                 self.log.append("reset_cycle")
-                 self.reset_cycle()
+    # * Transitions from curtainTripped to stopped
+     def resetCurtain(sm):
+         if(sm.current_state.id == "curtainTripped"):
+             if sm.chipsInArm:
+                 sm.log.append("reset_cycle")
+                 sm.reset_cycle()
              else:
-                 self.log.append("straight_reset")
-                 self.straight_reset()
+                 sm.log.append("straight_reset")
+                 sm.straight_reset()
          
-         self.runningMethodCI = False
+         sm.runningMethodCI = False
 
-     # * Transtions from curtainTripped to the last non fault state
-     def curtainContinue(self):
-         if self.current_state.id == "curtainTripped":
-            self.current_state = self.lastNFS
-            self.on_exit_curtainTripped()
-            self.log.append("curtain_continue")
-            self.log.append(self.lastNFS.id)
-            threading.Thread(target=self.check_input, args=[self.lastNFS.id]).start()
+     def curtainContinue(sm):
+         if sm.current_state.id == "curtainTripped":
+            sm.current_state = sm.lastNFS
+            sm.on_exit_curtainTripped()
+            sm.log.append("curtain_continue")
+            sm.log.append(sm.lastNFS.id)
+            threading.Thread(target=sm.check_input, args=[sm.lastNFS.id]).start()
          
          # * Allows check input methods to be run again
-         self.runningMethodCI = False
+         sm.runningMethodCI = False
