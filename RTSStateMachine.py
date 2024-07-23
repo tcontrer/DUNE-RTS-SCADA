@@ -13,6 +13,8 @@ import os
 # test_cycle: Will transition the state machine between testing states.
 # begin_cleanup: Will transition the state machine to the cleanup states.
 # cleanup_cycle: Will transition the state machine between the cleanup states.
+# done: Will transition from the last cleanup state to ground.
+# to_stopping: Will transition from any state (except stopped or stopping) straight to stopping.
 # curtain_tripped: Will transition the state machine from any state to the curtainTripped state.
 # reset_cycle: Will transition the state machine from the curtainTripped state through the resetting states. Run if there 
 # could be chips on the RTS's arm.
@@ -33,6 +35,11 @@ import os
 # the corrosponding action is complete
 # lastNFT: string that tracks the last non fault state the state machine was in. Used to help restart after light curtain trip
 # chipsInArm: boolean that is true when there are chips on the RTS's arm and false when there aren't.
+# basicStates: list that contains all the basic states.
+# movingChipsStates: list that contains all the chip moving states.
+# testingChipsStates: list that contains all the chip testing states.
+# cleanupChipStates: list that contains all the cleanup states.
+# resettingStates: list that contains all the resetting states.
 
 class RTSMachine(StateMachine):
      def __init__(self):
@@ -47,12 +54,12 @@ class RTSMachine(StateMachine):
          # Tracks if the arm has chips in it
          self.chipsInArm: bool = False
 
-         # * Tuples that group states together. Used to have more general checks of state.
-         self.basicStates: tuple = ("ground", "starting", "started", "stopping", "stopped")
-         self.movingChipStates: tuple = ("pickingChips", "chipsPicked", "movingChipsToBoard", "chipsMovedToBoard", "placingChips", "chipsPlaced")
-         self.testingChipStates: tuple = ("poweringOnWIB", "WIBOn", "testingChips", "chipsTested", "reviewingResults", "resultsReviewed", "sendingData", "dataSent", "poweringOffWIB", "WIBOff")
-         self.cleanupChipStates: tuple = ("removingChips", "chipsRemoved")
-         self.resettingStates: tuple = ("waitingToMoveToTray", "movingChipsToTray", "chipsMovedToTray", "placingChipsOnTray", "chipsPlacedOnTray")
+         # * Lists that group states together. Used to have more general checks of state.
+         self.basicStates: list = ["ground", "starting", "started", "stopping", "stopped"]
+         self.movingChipStates: list = ["pickingChips", "chipsPicked", "movingChipsToBoard", "chipsMovedToBoard", "placingChips", "chipsPlaced"]
+         self.testingChipStates: list = ["poweringOnWIB", "WIBOn", "testingChips", "chipsTested", "reviewingResults", "resultsReviewed", "sendingData", "dataSent", "poweringOffWIB", "WIBOff"]
+         self.cleanupChipStates: list = ["removingChips", "chipsRemoved"]
+         self.resettingStates: list = ["waitingToMoveToTray", "movingChipsToTray", "chipsMovedToTray", "placingChipsOnTray", "chipsPlacedOnTray"]
 
          # * List to track the transitions and states the state machine has gone through
          self.log: list = []
@@ -161,6 +168,36 @@ class RTSMachine(StateMachine):
          chipsRemoved.to(ground)
      )
 
+     # Transitions the state machine to the stopping state
+     to_stopping = (
+         ground.to(stopping)
+         | starting.to(stopping)
+         | started.to(stopping)
+         | pickingChips.to(stopping)
+         | chipsPicked.to(stopping)
+         | movingChipsToBoard.to(stopping)
+         | chipsMovedToBoard.to(stopping)
+         | placingChips.to(stopping)
+         | chipsPlaced.to(stopping)
+         | poweringOnWIB.to(stopping)
+         | WIBOn.to(stopping)
+         | testingChips.to(stopping)
+         | chipsTested.to(stopping)
+         | reviewingResults.to(stopping)
+         | resultsReviewed.to(stopping)
+         | sendingData.to(stopping)
+         | dataSent.to(stopping)
+         | poweringOffWIB.to(stopping)
+         | WIBOff.to(stopping)
+         | removingChips.to(stopping)
+         | chipsRemoved.to(stopping)
+         | waitingToMoveToTray.to(stopping)
+         | movingChipsToTray.to(stopping)
+         | chipsMovedToTray.to(stopping)
+         | placingChipsOnTray.to(stopping)
+         | chipsPlacedOnTray.to(stopping)
+     )
+
      # Sends the state machine right to the curtain tripped state
      curtain_tripped = (
          ground.to(curtainTripped)
@@ -178,12 +215,19 @@ class RTSMachine(StateMachine):
          | WIBOn.to(curtainTripped)
          | testingChips.to(curtainTripped)
          | chipsTested.to(curtainTripped)
+         | reviewingResults.to(curtainTripped)
+         | resultsReviewed.to(curtainTripped)
          | sendingData.to(curtainTripped)
          | dataSent.to(curtainTripped)
          | poweringOffWIB.to(curtainTripped)
          | WIBOff.to(curtainTripped)
          | removingChips.to(curtainTripped)
          | chipsRemoved.to(curtainTripped)
+         | waitingToMoveToTray.to(curtainTripped)
+         | movingChipsToTray.to(curtainTripped)
+         | chipsMovedToTray.to(curtainTripped)
+         | placingChipsOnTray.to(curtainTripped)
+         | chipsPlacedOnTray.to(curtainTripped)
      )
 
      # Sends the state machine from curtain tripped through the resetting states
@@ -308,6 +352,16 @@ class RTSMachine(StateMachine):
          self.log.append("chipsTested")
          self.lastNFS = self.current_state
 
+     def on_enter_reviewingResults(self):
+         print("Reviewing Results")
+         self.log.append("reviewingResults")
+         self.lastNFS = self.current_state
+     
+     def on_enter_resultsReviewed(self):
+         print("Results Reviewed")
+         self.log.append("resultsReviewed")
+         self.lastNFS = self.current_state
+
      def on_enter_sendingData(self):
          print("The test data is being sent")
          self.log.append("sendingData")
@@ -422,15 +476,18 @@ class RTSMachine(StateMachine):
                     elif (last_line.rstrip() == "pickingChips") & (self.GUIidle) & (not self.runningMethodCI):
                         self.runningMethodCI = True
                         self.beginChipMoving()
-                    elif (last_line.rstrip() != self.lastNFS.id) & (last_line.rstrip() in self.movingChipStates) & (self.current_state.id in self.movingChipStates) & (self.GUIidle) & (not self.runningMethodCI):
-                        self.runningMethodCI = True
-                        self.cycleChipMoving()
+                    elif (self.current_state.id in self.movingChipStates) & (last_line.rstrip() in self.movingChipStates):
+                        if ((self.movingChipStates.index(self.current_state.id) + 1) == self.movingChipStates.index(last_line)) & (self.GUIidle) & (not self.runningMethodCI):
+                            self.runningMethodCI = True
+                            self.cycleChipMoving()
                     elif (last_line.rstrip() == "poweringOnWIB") & (self.GUIidle) & (not self.runningMethodCI):
                         self.runningMethodCI = True
                         self.beginChipTesting()
-                    elif (last_line.rstrip() != self.lastNFS.id) & (last_line.rstrip() in self.resettingStates) & (self.current_state.id in self.resettingStates) & (self.GUIidle) & (not self.runningMethodCI):
-                        self.runningMethodCI = True
-                        self.cycleResetting()
+                    elif (self.current_state.id in self.resettingStates) & (last_line.rstrip() in self.resettingStates):
+                        if ((self.resettingStates.index(self.current_state.id) + 1) == self.resettingStates.index(last_line)) & (self.GUIidle) & (not self.runningMethodCI):
+                            self.runningMethodCI = True
+                            print("Running Reset Cycle from file reading")
+                            self.cycleResetting()
                     elif (last_line.rstrip() == "curtainTripped") & (self.GUIidle) & (not self.runningMethodCI):
                         self.runningMethodCI = True
                         self.tripCurtain()
@@ -548,7 +605,7 @@ class RTSMachine(StateMachine):
 
      # * Transitions from any state to curtainTripped
      def tripCurtain(self):
-         if(self.current_state.id != "curtainTripped") & (self.current_state.id != "ground") & (self.current_state.id != "waitingToMoveToTray"):
+         if(self.current_state.id != "curtainTripped") & (self.current_state.id != "ground"):
              self.log.append("curtain_tripped")
              self.curtain_tripped()
          
