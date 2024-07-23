@@ -5,7 +5,10 @@ Supervisory Control and Data Acquisition (SCADA) software for testing electronic
 RTSStateMachine.py sets up a state machine for the RTS using the python state machine library
 ![alt text](RTSStateMachineGraphic.png)
 
+checkInputMethods.py defines the methods that are used to read and react to input from a file.
+
 GUI.py creates a user interface using tkinter that interacts with the state machine (GUI must be passed a state machine)
-    buttonMethods.py defines the methods run by the buttons on the GUI
+
+buttonMethods.py defines the methods run by the buttons on the GUI
 
 main.py is a file that creates a state machine and GUI and can be used to run the program
