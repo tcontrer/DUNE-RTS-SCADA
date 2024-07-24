@@ -44,10 +44,14 @@ def updateStateMachine(sm, last_line: str):
         sm.runningMethodCI = True
         goToGround(sm)
     elif (last_line.rstrip() == "pickingChips") & (sm.GUIidle) & (not sm.runningMethodCI):
-        sm.runningMethodCI = True
-        beginChipMoving(sm)
+        if ((last_line.rstrip() == "pickingChips") & (sm.current_state.id == "chipsPlaced")):
+            sm.runningMethodCI = True
+            cycleChipMoving(sm)
+        else:
+            sm.runningMethodCI = True
+            beginChipMoving(sm)
     elif (sm.current_state.id in sm.movingChipStates) & (last_line.rstrip() in sm.movingChipStates):
-        if ((sm.movingChipStates.index(sm.current_state.id) + 1) == sm.movingChipStates.index(last_line)) & (sm.GUIidle) & (not sm.runningMethodCI):
+        if ((sm.movingChipStates.index(sm.current_state.id) + 1) == sm.movingChipStates.index(last_line.rstrip())) & (sm.GUIidle) & (not sm.runningMethodCI):
             sm.runningMethodCI = True
             cycleChipMoving(sm)
     elif (last_line.rstrip() == "poweringOnWIB") & (sm.GUIidle) & (not sm.runningMethodCI):
