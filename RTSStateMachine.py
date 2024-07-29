@@ -450,24 +450,24 @@ class RTSMachine(StateMachine):
             time.sleep(.5)
 
     # * Transitions from curtainTripped to stopped
-     def resetCurtain(sm):
-         if(sm.current_state.id == "curtainTripped"):
-             if sm.chipsInArm:
-                 sm.log.append("reset_cycle")
-                 sm.reset_cycle()
+     def resetCurtain(self):
+         if(self.current_state.id == "curtainTripped"):
+             if self.chipsInArm:
+                 self.log.append("reset_cycle")
+                 self.reset_cycle()
              else:
-                 sm.log.append("straight_reset")
-                 sm.straight_reset()
+                 self.log.append("straight_reset")
+                 self.straight_reset()
          
-         sm.runningMethodCI = False
+         self.runningMethodCI = False
 
-     def curtainContinue(sm):
-         if sm.current_state.id == "curtainTripped":
-            sm.current_state = sm.lastNFS
-            sm.on_exit_curtainTripped()
-            sm.log.append("curtain_continue")
-            sm.log.append(sm.lastNFS.id)
-            threading.Thread(target=sm.check_input, args=[sm.lastNFS.id]).start()
+     def curtainContinue(self):
+         if self.current_state.id == "curtainTripped":
+            self.current_state = self.lastNFS
+            self.on_exit_curtainTripped()
+            self.log.append("curtain_continue")
+            self.log.append(self.lastNFS.id)
+            threading.Thread(target=self.check_input, args=[self.lastNFS.id]).start()
          
          # * Allows check input methods to be run again
-         sm.runningMethodCI = False
+         self.runningMethodCI = False

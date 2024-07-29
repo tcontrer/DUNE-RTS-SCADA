@@ -293,7 +293,7 @@ class GUI:
 
                self.toChipsPlaced.pack_forget()
                self.toPoweringOnWIB.pack()
-               self.toPickingChips.pack()
+               self.toPickingChips.pack(pady=10)
 
                self.ctnbtn.pack_forget()
                self.resetbtn.pack_forget()
@@ -350,7 +350,7 @@ class GUI:
 
                self.toResultsReviewed.pack_forget()
                self.toSendingData.pack()
-               self.toTestingChips.pack()
+               self.toTestingChips.pack(pady=10)
 
                self.ctnbtn.pack_forget()
                self.resetbtn.pack_forget()
