@@ -41,6 +41,7 @@ class GUI:
      def __init__(self, sm: RTSSM.RTSMachine) -> None:       
           self.sm: RTSSM.RTSMachine = sm
           self.flag = True
+          self.DATCreated = False
           self.count: int = 0
 
           # Creating window
@@ -48,6 +49,9 @@ class GUI:
           self.root.geometry("500x200")
           self.root.title("Robot State Machine")
           self.root.config(bg="#99D6EA") 
+
+          self.showDAT: tk.Button = tk.Button(self.root, text="Show DAT Status", font=('Helvetica', 18), command=self.createDATWindow)
+          self.showDAT.pack(padx=10, pady=10)
 
           # Adding label to display state
           if (self.sm.current_state.id == "starting") | (self.sm.current_state.id == "started") | (self.sm.current_state.id == "ground"):
@@ -150,6 +154,54 @@ class GUI:
                     self.update_label()
                     self.update_buttons()
                     self.update_background()
+                    if self.DATCreated:
+                         self.updateDATDisplay()
+
+     def createDATWindow(self):
+          self.DAT = tk.Toplevel()
+          self.DATCreated: bool = True
+          self.DAT.title("DAT Status Display")
+          chipSlotOne = tk.LabelFrame(self.DAT, bg="black")
+          chipSlotOne.grid(row=0, column=0, padx=10, pady=10)
+          chipOneLable = tk.Label(chipSlotOne, text="Chip Slot One", font=('Helvetica', 18))
+          chipOneLable.pack()
+
+          chipSlotTwo = tk.LabelFrame(self.DAT, bg="black")
+          chipSlotTwo.grid(row=0, column=1, padx=10, pady=10)
+          chipTwoLable = tk.Label(chipSlotTwo, text="Chip Slot Two", font=('Helvetica', 18))
+          chipTwoLable.pack()
+
+          chipSlotThree = tk.LabelFrame(self.DAT, bg="black")
+          chipSlotThree.grid(row=0, column=2, padx=10, pady=10)
+          chipThreeLable = tk.Label(chipSlotThree, text="Chip Slot Three", font=('Helvetica', 18))
+          chipThreeLable.pack()
+
+          chipSlotFour = tk.LabelFrame(self.DAT, bg="black")
+          chipSlotFour.grid(row=0, column=3, padx=10, pady=10)
+          chipFourLable = tk.Label(chipSlotFour, text="Chip Slot Four", font=('Helvetica', 18))
+          chipFourLable.pack()
+
+          chipSlotFive = tk.LabelFrame(self.DAT, bg="black")
+          chipSlotFive.grid(row=1, column=0, padx=10, pady=10)
+          chipFiveLable = tk.Label(chipSlotFive, text="Chip Slot Five", font=('Helvetica', 18))
+          chipFiveLable.pack()
+
+          chipSlotSix = tk.LabelFrame(self.DAT, bg="black")
+          chipSlotSix.grid(row=1, column=1, padx=10, pady=10)
+          chipSixLable = tk.Label(chipSlotSix, text="Chip Slot Six", font=('Helvetica', 18))
+          chipSixLable.pack()
+
+          chipSlotSeven = tk.LabelFrame(self.DAT, bg="black")
+          chipSlotSeven.grid(row=1, column=2, padx=10, pady=10)
+          chipSevenLable = tk.Label(chipSlotSeven, text="Chip Slot Seven", font=('Helvetica', 18))
+          chipSevenLable.pack()
+
+          chipSlotEight = tk.LabelFrame(self.DAT, bg="black")
+          chipSlotEight.grid(row=1, column=3, padx=10, pady=10)
+          chipEightLable = tk.Label(chipSlotEight, text="Chip Slot Eight", font=('Helvetica', 18))
+          chipEightLable.pack()
+
+          self.DAT.protocol("WM_DELETE_WINDOW", self.closeDATWindow)
                     
 
      # * When window is closed destroies the GUI
@@ -158,6 +210,10 @@ class GUI:
           self.flag = False
           self.root.destroy()
           self.sm.exists = False
+
+     def closeDATWindow(self):
+          self.DATCreated = False
+          self.DAT.destroy()
 
      # * Cyles the state machine and updates the label
      def cycle(self):
@@ -201,6 +257,9 @@ class GUI:
                self.frame.config(bg="lightblue")
                self.label.config(bg="lightblue")
                self.count = 0
+
+     def updateDATDisplay(self):
+          print("test")
 
      # * Changes the state, color, and visibility of buttons based on the state of the state machine
      def update_buttons(self):
