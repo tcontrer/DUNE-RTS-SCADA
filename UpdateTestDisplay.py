@@ -47,35 +47,26 @@ def readDAT(GUI):
 # * Updates the display to reflect which chip slots have completed testing. Only run when DAT window is open
 def updateDATDisplay(GUI):
     if GUI.chipSlotsTested[0]:
-        GUI.chipSlotOne.config(bg="green")
         GUI.chipOneLabel.config(bg="green")
     if GUI.chipSlotsTested[1]:
-        GUI.chipSlotTwo.config(bg="green")
         GUI.chipTwoLabel.config(bg="green")
     if GUI.chipSlotsTested[2]:
-        GUI.chipSlotThree.config(bg="green")
         GUI.chipThreeLabel.config(bg="green")
     if GUI.chipSlotsTested[3]:
-        GUI.chipSlotFour.config(bg="green")
         GUI.chipFourLabel.config(bg="green")
     if GUI.chipSlotsTested[4]:
-        GUI.chipSlotFive.config(bg="green")
         GUI.chipFiveLabel.config(bg="green")
     if GUI.chipSlotsTested[5]:
-        GUI.chipSlotSix.config(bg="green")
         GUI.chipSixLabel.config(bg="green")
     if GUI.chipSlotsTested[6]:
-        GUI.chipSlotSeven.config(bg="green")
         GUI.chipSevenLabel.config(bg="green")
     if GUI.chipSlotsTested[7]:
-        GUI.chipSlotEight.config(bg="green")
         GUI.chipEightLabel.config(bg="green")
 
-# * Resets all chipSlots, chipLabels, and tracking variables to their no test values
+# * Resets all chipLabels and tracking variables to their pre-test values
 def resetChipTests(GUI):
     count: int = 0
     while count < 8:
-        GUI.chipSlots[count].config(bg="black")
         GUI.chipLabels[count].config(bg="lightgray")
         GUI.chipSlotsTested[count] = False
         

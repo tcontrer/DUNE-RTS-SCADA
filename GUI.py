@@ -42,8 +42,7 @@ import UpdateTestDisplay
 # DATCreated: Boolean that tracks if the DAT window has been created. Used to know if widgets on the DAT can be updated.
 # count: Keeps track of the number of messageboxes pulled up. Prevents a new messagebox being created every second that the 
 # curtain is tripped.
-# chipSlots: List to hold all the frames on the DAT window that represent chip slots on the DAT board.
-# chipLabels: List to hold all the labels inside the frams on the DAT window.
+# chipLabels: List to hold all the labels on the DAT Display Window. Represent chip slots on the actual DAT board.
 # chipSlotsTested: List that tracks which of the chips in the eight chip slots have been tested. Used to track which slots on
 # the DAT display should be green.
 # toBlankBtns: Tuple of all the toBlank buttons.
@@ -60,14 +59,13 @@ class GUI:
           self.count: int = 0
 
           # Placeholders for chipSlots and chipLabels lists that will be created with DAT window
-          self.chipSlots: list = []
           self.chipLabels: list = []
 
           self.chipSlotsTested: list = [False, False, False, False, False, False, False, False]
 
           # Creating window
           self.root: tk.Tk = tk.Tk()
-          self.root.geometry("500x200")
+          self.root.geometry("500x400")
           self.root.title("Robot State Machine")
           self.root.config(bg="#99D6EA") 
 
@@ -154,6 +152,9 @@ class GUI:
 
           self.toBlankBtns: tuple = (self.toStarting, self.toStarted, self.toPickingChips, self.toChipsPicked, self.toMovingChipsToBoard, self.toChipsMovedToBoard, self.toPlacingChips, self.toChipsPlaced, self.toPoweringOnWIB, self.toWIBOn, self.toTestingChips, self.toChipsTested, self.toSendingData, self.toDataSent, self.toPoweringOffWIB, self.toWIBOff, self.toRemovingChips, self.toChipsRemoved, self.toGround, self.toMovingChipsToTray, self.toChipsMovedToTray, self.toPlacingChipsOnTray, self.toChipsPlacedOnTray)
 
+          # Uncomment the below line of code to have a DAT Window created on startup
+          # // self.createDATWindow()
+
           # Create a new thread where the gui will constantly check the state
           t1 = threading.Thread(target=self.check_state)
           t1.start()
@@ -188,48 +189,31 @@ class GUI:
           self.DAT.title("DAT Status Display")
 
           self.showDAT["state"] = "disabled"
+          
+          self.chipOneLabel = tk.Label(self.DAT, text="Chip Slot One", font=('Helvetica', 18), bg="lightgray", borderwidth=2, relief="solid")
+          self.chipOneLabel.grid(row=0, column=0, padx=10, pady=10)
 
-          self.chipSlotOne = tk.LabelFrame(self.DAT, bg="black")
-          self.chipSlotOne.grid(row=0, column=0, padx=10, pady=10)
-          self.chipOneLabel = tk.Label(self.chipSlotOne, text="Chip Slot One", font=('Helvetica', 18), bg="lightgray")
-          self.chipOneLabel.pack()
+          self.chipTwoLabel = tk.Label(self.DAT, text="Chip Slot Two", font=('Helvetica', 18), bg="lightgray", borderwidth=2, relief="solid")
+          self.chipTwoLabel.grid(row=0, column=1, padx=10, pady=10)
 
-          self.chipSlotTwo = tk.LabelFrame(self.DAT, bg="black")
-          self.chipSlotTwo.grid(row=0, column=1, padx=10, pady=10)
-          self.chipTwoLabel = tk.Label(self.chipSlotTwo, text="Chip Slot Two", font=('Helvetica', 18), bg="lightgray")
-          self.chipTwoLabel.pack()
+          self.chipThreeLabel = tk.Label(self.DAT, text="Chip Slot Three", font=('Helvetica', 18), bg="lightgray", borderwidth=2, relief="solid")
+          self.chipThreeLabel.grid(row=0, column=2, padx=10, pady=10)
 
-          self.chipSlotThree = tk.LabelFrame(self.DAT, bg="black")
-          self.chipSlotThree.grid(row=0, column=2, padx=10, pady=10)
-          self.chipThreeLabel = tk.Label(self.chipSlotThree, text="Chip Slot Three", font=('Helvetica', 18), bg="lightgray")
-          self.chipThreeLabel.pack()
+          self.chipFourLabel = tk.Label(self.DAT, text="Chip Slot Four", font=('Helvetica', 18), bg="lightgray", borderwidth=2, relief="solid")
+          self.chipFourLabel.grid(row=0, column=3, padx=10, pady=10)
 
-          self.chipSlotFour = tk.LabelFrame(self.DAT, bg="black")
-          self.chipSlotFour.grid(row=0, column=3, padx=10, pady=10)
-          self.chipFourLabel = tk.Label(self.chipSlotFour, text="Chip Slot Four", font=('Helvetica', 18), bg="lightgray")
-          self.chipFourLabel.pack()
+          self.chipFiveLabel = tk.Label(self.DAT, text="Chip Slot Five", font=('Helvetica', 18), bg="lightgray", borderwidth=2, relief="solid")
+          self.chipFiveLabel.grid(row=1, column=0, padx=10, pady=10)
 
-          self.chipSlotFive = tk.LabelFrame(self.DAT, bg="black")
-          self.chipSlotFive.grid(row=1, column=0, padx=10, pady=10)
-          self.chipFiveLabel = tk.Label(self.chipSlotFive, text="Chip Slot Five", font=('Helvetica', 18), bg="lightgray")
-          self.chipFiveLabel.pack()
+          self.chipSixLabel = tk.Label(self.DAT, text="Chip Slot Six", font=('Helvetica', 18), bg="lightgray", borderwidth=2, relief="solid")
+          self.chipSixLabel.grid(row=1, column=1, padx=10, pady=10)
 
-          self.chipSlotSix = tk.LabelFrame(self.DAT, bg="black")
-          self.chipSlotSix.grid(row=1, column=1, padx=10, pady=10)
-          self.chipSixLabel = tk.Label(self.chipSlotSix, text="Chip Slot Six", font=('Helvetica', 18), bg="lightgray")
-          self.chipSixLabel.pack()
+          self.chipSevenLabel = tk.Label(self.DAT, text="Chip Slot Seven", font=('Helvetica', 18), bg="lightgray", borderwidth=2, relief="solid")
+          self.chipSevenLabel.grid(row=1, column=2, padx=10, pady=10)
 
-          self.chipSlotSeven = tk.LabelFrame(self.DAT, bg="black")
-          self.chipSlotSeven.grid(row=1, column=2, padx=10, pady=10)
-          self.chipSevenLabel = tk.Label(self.chipSlotSeven, text="Chip Slot Seven", font=('Helvetica', 18), bg="lightgray")
-          self.chipSevenLabel.pack()
+          self.chipEightLabel = tk.Label(self.DAT, text="Chip Slot Eight", font=('Helvetica', 18), bg="lightgray", borderwidth=2, relief="solid")
+          self.chipEightLabel.grid(row=1, column=3, padx=10, pady=10)
 
-          self.chipSlotEight = tk.LabelFrame(self.DAT, bg="black")
-          self.chipSlotEight.grid(row=1, column=3, padx=10, pady=10)
-          self.chipEightLabel = tk.Label(self.chipSlotEight, text="Chip Slot Eight", font=('Helvetica', 18), bg="lightgray")
-          self.chipEightLabel.pack()
-
-          self.chipSlots = [self.chipSlotOne, self.chipSlotTwo, self.chipSlotThree, self.chipSlotFour, self.chipSlotFive, self.chipSlotSix, self.chipSlotSeven, self.chipSlotEight]
           self.chipLabels = [self.chipOneLabel, self.chipTwoLabel, self.chipThreeLabel, self.chipFourLabel, self.chipFiveLabel, self.chipSixLabel, self.chipSevenLabel, self.chipEightLabel]
 
           self.DAT.protocol("WM_DELETE_WINDOW", self.closeDATWindow)
