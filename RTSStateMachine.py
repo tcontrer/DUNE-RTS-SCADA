@@ -39,6 +39,8 @@ import checkInputMethods
 # the corrosponding action is complete
 # lastNFT: string that tracks the last non fault state the state machine was in. Used to help restart after light curtain trip
 # chipsInArm: boolean that is true when there are chips on the RTS's arm and false when there aren't.
+# testing: boolean that is true when the state machine is in the testing states.
+# chipTestNeedsReset: booleans that is true when the chip test trackers on the GUI need to be reset.
 # basicStates: list that contains all the basic states.
 # movingChipsStates: list that contains all the chip moving states.
 # testingChipsStates: list that contains all the chip testing states.
@@ -57,6 +59,10 @@ class RTSMachine(StateMachine):
          self.lastNFS: State
          # Tracks if the arm has chips in it
          self.chipsInArm: bool = False
+         # Tracks if in the testing states
+         self.testing: bool = False
+         # Tracks if the chips test needs to be reset
+         self.chipTestNeedsReset = False
 
          # * Lists that group states together. Used to have more general checks of state.
          self.basicStates: list = ["ground", "starting", "started", "stopping", "stopped"]
@@ -340,6 +346,8 @@ class RTSMachine(StateMachine):
          print("The WIB is being powered on")
          self.log.append("poweringOnWIB")
          self.lastNFS = self.current_state
+        
+         self.testing = True
 
      def on_enter_WIBOn(self):
          print("The WIB has been powered on")
@@ -391,6 +399,9 @@ class RTSMachine(StateMachine):
          self.log.append("removingChips")
          self.lastNFS = self.current_state
 
+         self.testing = False
+         self.chipTestNeedsReset = True
+
      def on_enter_chipsRemoved(self):
          print("The chips have been removed")
          self.log.append("chipsRemoved")
@@ -436,6 +447,9 @@ class RTSMachine(StateMachine):
      def on_exit_curtainTripped(self):
          print("Light curtain has been reset")
 
+     # * Method called automatically when the state machine runs the transition it specifies
+     def on_retest(self):
+         self.chipTestNeedsReset = True
 
      # * Method that reads a file written by the robot and updates the state if needed
      # * Must be passed the state at the time of method call so it can stop once the state is changed
