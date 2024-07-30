@@ -14,13 +14,16 @@ import UpdateTestDisplay
 
 # * GUI Elements:
 # label: Text that displays the state or type of state
-# frame: Holds the buttons
+# frame: Holds the buttons on the main window
      # * Buttons (Methods run are in the buttonMethods.py file):
      # stopbtn: Button that changes the state to stopped
      # ctnbtn: Button that is shown when the curtain is tripped. Sends the state machine back to the last non fault state
      # resetbtn: Button that is shown when the curtain is tripped. Sends the state machine into the waitingToMoveToTray state.
      # The toBlank buttons: Buttons that step the state machine to the state in the name. Only present when in a state that directly transitions
      # to the state in the button name.
+# * DAT Toplevel: second window to display the state of testing
+     # chipSlot_NUMBER_: Frames that create boarders around chip_NUMBER_labels. Represent a chip slot on the actual DAT board.
+     # chip_NUMBER_label: Labels that describe what chip slot the frame represents.
 
 # * Methods:
 # __init__: Creates the GUI in its inital state with start and stop button and label to display current state.
@@ -39,8 +42,10 @@ import UpdateTestDisplay
 # DATCreated: Boolean that tracks if the DAT window has been created. Used to know if widgets on the DAT can be updated.
 # count: Keeps track of the number of messageboxes pulled up. Prevents a new messagebox being created every second that the 
 # curtain is tripped.
+# chipSlots: List to hold all the frames on the DAT window that represent chip slots on the DAT board.
+# chipLabels: List to hold all the labels inside the frams on the DAT window.
 # chipSlotsTested: List that tracks which of the chips in the eight chip slots have been tested. Used to track which slots on
-# the DAT display should be green
+# the DAT display should be green.
 # toBlankBtns: Tuple of all the toBlank buttons.
 
 class GUI:
@@ -159,7 +164,7 @@ class GUI:
           # Creating the window
           self.root.mainloop()
 
-     # * Checks the state and updates the label accordingly every second
+     # * Checks the state and updates the label, buttons, background, and DAT window accordingly every second
      def check_state(self):
           while self.flag:
                time.sleep(1)
@@ -176,6 +181,7 @@ class GUI:
                          if self.sm.chipTestNeedsReset:
                               UpdateTestDisplay.resetChipTests(self)
 
+     # * Creates a second window to display DAT test states
      def createDATWindow(self):
           self.DAT = tk.Toplevel()
           self.DATCreated: bool = True
@@ -236,6 +242,7 @@ class GUI:
           self.root.destroy()
           self.sm.exists = False
 
+     # * When DAT window is closed it is properly destroyed
      def closeDATWindow(self):
           self.DATCreated = False
           self.DAT.destroy()

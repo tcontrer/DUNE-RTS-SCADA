@@ -1,5 +1,9 @@
 import os
 
+# * Class with the methods called to update and reset the DAT Window. Methods are called from within GUI.py
+
+# * Method that reads the input from a file and updates what chips have been tested by accessing variables
+# * defined in the GUI class
 def readDAT(GUI):
     # * Path name for file being read
          # ! Must be updated for different machines and file names
@@ -19,6 +23,7 @@ def readDAT(GUI):
                 if last_line != None:
                     last_line = last_line.rstrip()
 
+                # Updates what chips have been tested
                 if GUI.sm.testing: 
                     if last_line == "ChipSlotOneTested":
                         GUI.chipSlotsTested[0] = True
@@ -39,6 +44,7 @@ def readDAT(GUI):
          else:
             print("Check file path name")
 
+# * Updates the display to reflect which chip slots have completed testing. Only run when DAT window is open
 def updateDATDisplay(GUI):
     if GUI.chipSlotsTested[0]:
         GUI.chipSlotOne.config(bg="green")
@@ -65,6 +71,7 @@ def updateDATDisplay(GUI):
         GUI.chipSlotEight.config(bg="green")
         GUI.chipEightLabel.config(bg="green")
 
+# * Resets all chipSlots, chipLabels, and tracking variables to their no test values
 def resetChipTests(GUI):
     count: int = 0
     while count < 8:

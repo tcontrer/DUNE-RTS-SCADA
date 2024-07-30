@@ -11,4 +11,6 @@ GUI.py creates a user interface using tkinter that interacts with the state mach
 
 buttonMethods.py defines the methods run by the buttons on the GUI
 
+UpdateTestDisplay.py defines the methods used to update the DAT display window based on a file and to reset the DAT window when necessary. Methods run from within GUI.py
+
 main.py is a file that creates a state machine and GUI and can be used to run the program
