@@ -41,6 +41,8 @@ def readDAT(GUI):
                         GUI.chipSlotsTested[6] = True
                     if last_line == "ChipSlotEightTested":
                         GUI.chipSlotsTested[7] = True
+                    if last_line == "reset":
+                        resetChipTests(GUI)
          else:
             print("Check file path name")
 
