@@ -21,15 +21,21 @@ import UpdateTestDisplay
      # resetbtn: Button that is shown when the curtain is tripped. Sends the state machine into the waitingToMoveToTray state.
      # The toBlank buttons: Buttons that step the state machine to the state in the name. Only present when in a state that directly transitions
      # to the state in the button name.
-# * DAT Toplevel: second window to display the state of testing
+# * DAT Toplevel: Seperate window to display the state of the chips on the DAT board
      # chipSlot_NUMBER_: Frames that create boarders around chip_NUMBER_labels. Represent a chip slot on the actual DAT board.
      # chip_NUMBER_label: Labels that describe what chip slot the frame represents.
+# * ChipTrayWindow Toplevel: Seperate window to display the results of testing for each chip (pass vs fail)
+     # chipTrayLabels: List that tracks each of the fourty labels on the chip tray window.
 
 # * Methods:
 # __init__: Creates the GUI in its inital state with start and stop button and label to display current state.
 # Runs check state in seperate thread to consitantly update the GUI
 # checkState: Runs every second until the GUI is closed. Calls update_label, update_buttons, and update_background
+# createDATWindow: Creates a new window that contains representatons of eight chip slots.
+# createChipTrayWindow: Creates a new window that contains representations of fourty chips.
 # on_closing: Runs when the GUI is closed. Properly destroys the window.
+# closeDATWindow: Runs when DAT window is closed. Properly destroys the window.
+# closeChipTrayWindow: Runs when chip tray window is closed. Properly destroys the window.
 # update_label: Changes the color and text of the label to match the current state
 # update_buttons: Disables the buttons in states where they shouldn't be pressed and resets them when they can be pressed
 # update_background: Changes the background to orange when in an fault state and resets it when not. Creates a popup
@@ -40,9 +46,11 @@ import UpdateTestDisplay
 # sm: Assigned to the state machine passed into the GUI. Used to access and transition state.
 # flag: Boolean that tracks if the GUI has been closed.
 # DATCreated: Boolean that tracks if the DAT window has been created. Used to know if widgets on the DAT can be updated.
+# chipTrayCreated: Boolean that tracks if the chip tray display window is open.
 # count: Keeps track of the number of messageboxes pulled up. Prevents a new messagebox being created every second that the 
 # curtain is tripped.
 # chipLabels: List to hold all the labels on the DAT Display Window. Represent chip slots on the actual DAT board.
+# chipTrayLabels: List to hold all the labels on the chip tray display window. Represent the fourty chips that fit on the chip tray.
 # chipSlotsTested: List that tracks which of the chips in the eight chip slots have been tested. Used to track which slots on
 # the DAT display should be green.
 # toBlankBtns: Tuple of all the toBlank buttons.
@@ -55,11 +63,16 @@ class GUI:
           self.flag = True
           # Tracks if the DAT window has been created
           self.DATCreated = False
+          # Tracks if the Chip Tray display window has been created
+          self.chipTrayCreated = False
           # Tracks the number of messageboxes
           self.count: int = 0
 
-          # Placeholders for chipSlots and chipLabels lists that will be created with DAT window
+          # Placeholder for chipLabels lists that will be created with DAT window
           self.chipLabels: list = []
+
+          # Placeholder for the labels on the chip tray display window
+          self.chipTrayLabels: list = []
 
           self.chipSlotsTested: list = [False, False, False, False, False, False, False, False]
 
@@ -71,6 +84,9 @@ class GUI:
 
           self.showDAT: tk.Button = tk.Button(self.root, text="Show DAT Status", font=('Helvetica', 18), command=self.createDATWindow)
           self.showDAT.pack(padx=10, pady=10)
+
+          self.showChipTray: tk.Button = tk.Button(self.root, text="Show Chip Tray Status", font=('Helvetica', 18), command=self.createChipTrayWindow)
+          self.showChipTray.pack(padx=10, pady=10)
 
           # Adding label to display state
           if (self.sm.current_state.id == "starting") | (self.sm.current_state.id == "started") | (self.sm.current_state.id == "ground"):
@@ -155,6 +171,9 @@ class GUI:
           # Uncomment the below line of code to have a DAT Window created on startup
           # // self.createDATWindow()
 
+          # Uncomment the below line of code to have a Chip Tray Window created on startup
+          # // self.createChipTrayWindow()
+
           # Create a new thread where the gui will constantly check the state
           t1 = threading.Thread(target=self.check_state)
           t1.start()
@@ -217,6 +236,24 @@ class GUI:
           self.chipLabels = [self.chipOneLabel, self.chipTwoLabel, self.chipThreeLabel, self.chipFourLabel, self.chipFiveLabel, self.chipSixLabel, self.chipSevenLabel, self.chipEightLabel]
 
           self.DAT.protocol("WM_DELETE_WINDOW", self.closeDATWindow)
+
+     # * Creates window with 40 labels that each represent a chip
+     def createChipTrayWindow(self):
+          self.ChipTrayWindow: tk.Toplevel = tk.Toplevel()
+          self.chipTrayCreated = True
+
+          self.showChipTray["state"] = "disabled"
+
+          self.ChipTrayWindow.title("Chip Tray Display")
+
+          for r in range(5):
+               for c in range(8):
+                    chipTrayLabel: tk.Label = tk.Label(self.ChipTrayWindow, text=f"Chip {((r + 1) * 8) - (8 - c)  + 1}", font=('Helvetica', 18), bg="lightgray", borderwidth=2, relief="solid")
+                    chipTrayLabel.grid(row=r, column=c, padx=10, pady=10)
+
+                    self.chipTrayLabels.append(chipTrayLabel)
+
+          self.ChipTrayWindow.protocol("WM_DELETE_WINDOW", self.closeChipTrayWindow)
                     
 
      # * When window is closed destroies the GUI
@@ -232,6 +269,13 @@ class GUI:
           self.DAT.destroy()
           
           self.showDAT["state"] = "normal"
+
+     # * When chip tray window is closed it is properly destroyed
+     def closeChipTrayWindow(self):
+          self.chipTrayCreated = False
+          self.ChipTrayWindow.destroy()
+
+          self.showChipTray["state"] = "normal"
 
      # * Cyles the state machine and updates the label
      def cycle(self):
