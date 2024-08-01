@@ -24,6 +24,7 @@ import UpdateTestDisplay
 # * DAT Toplevel: Seperate window to display the state of the chips on the DAT board
      # chipSlot_NUMBER_: Frames that create boarders around chip_NUMBER_labels. Represent a chip slot on the actual DAT board.
      # chip_NUMBER_label: Labels that describe what chip slot the frame represents.
+     # testsCompleteLabel: Label that is visible when in the chipsTested state to indicate that the tests have been completed
 # * ChipTrayWindow Toplevel: Seperate window to display the results of testing for each chip (pass vs fail)
      # chipTrayLabels: List that tracks each of the fourty labels on the chip tray window.
 
@@ -51,7 +52,9 @@ import UpdateTestDisplay
 # curtain is tripped.
 # chipLabels: List to hold all the labels on the DAT Display Window. Represent chip slots on the actual DAT board.
 # chipTrayLabels: List to hold all the labels on the chip tray display window. Represent the fourty chips that fit on the chip tray.
-# chipSlotsTested: List that tracks which of the chips in the eight chip slots have been tested. Used to track which slots on
+# chipSlotsPlaced: List that tracks which of the chips in the eight chip slots have been tested. Used to track which slots on
+# chipStatuses: List that tracks which of the chip labels on the chip tray display window need to be updated.
+# chipStatusesLog: List that logs the state of all the labels on the chip tray display window.
 # the DAT display should be green.
 # toBlankBtns: Tuple of all the toBlank buttons.
 
@@ -74,7 +77,14 @@ class GUI:
           # Placeholder for the labels on the chip tray display window
           self.chipTrayLabels: list = []
 
-          self.chipSlotsTested: list = [False, False, False, False, False, False, False, False]
+          self.chipSlotsPlaced: list = [False, False, False, False, False, False, False, False]
+
+          # Variable used to track what labels on the chip tray window currently need to be updated
+          self.chipStatuses: list = []
+          # Variable used to save the values of chip tray labels
+          self.chipStatusesLog: list = [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None]
+
+          self.testsCompleteLabel: tk.Label
 
           # Creating window
           self.root: tk.Tk = tk.Tk()
@@ -200,6 +210,11 @@ class GUI:
                          UpdateTestDisplay.updateDATDisplay(self)
                          if self.sm.chipTestNeedsReset:
                               UpdateTestDisplay.resetChipTests(self)
+                    UpdateTestDisplay.readChipTray(self)
+                    if self.chipTrayCreated:
+                         # // USED FOR DEBUGGING print(self.chipStatuses)
+                         UpdateTestDisplay.updateChipTrayDisplay(self)
+
 
      # * Creates a second window to display DAT test states
      def createDATWindow(self):
@@ -235,10 +250,13 @@ class GUI:
 
           self.chipLabels = [self.chipOneLabel, self.chipTwoLabel, self.chipThreeLabel, self.chipFourLabel, self.chipFiveLabel, self.chipSixLabel, self.chipSevenLabel, self.chipEightLabel]
 
+          self.testsCompleteLabel = tk.Label(self.DAT, text="Tests Complete", font=('Helvetica', 18))
+
           self.DAT.protocol("WM_DELETE_WINDOW", self.closeDATWindow)
 
-     # * Creates window with 40 labels that each represent a chip
+     # * Creates window with 40 labels that each represent a chip and updates the labels to match the chipStatusesLog
      def createChipTrayWindow(self):
+          # Creating window
           self.ChipTrayWindow: tk.Toplevel = tk.Toplevel()
           self.chipTrayCreated = True
 
@@ -253,7 +271,33 @@ class GUI:
 
                     self.chipTrayLabels.append(chipTrayLabel)
 
+          # Updating labels
+          count = 0
+          for chipStatus in self.chipStatusesLog:
+               if chipStatus != None:
+                    if chipStatus[8:] == "passed":
+                         self.chipTrayLabels[count].config(text="Passed", bg="green")
+                         # // USED FOR DEBUGGING print(f"Changing label from log: Chip {count} passed")
+                    if chipStatus[8:] == "failed":
+                         self.chipTrayLabels[count].config(text="Failed", bg="red")
+                         # // USED FOR DEBUGGING print(f"Changing label from log: Chip {count} failed")
+                    
+               count += 1
+
+          # Creating reset button
+          self.resetChipTrayWindow: tk.Button = tk.Button(self.ChipTrayWindow, text="Reset", font=('Helvetica', 18), command=lambda: buttonMethods.resetChipTrayWindow(self))
+          self.resetChipTrayWindow.grid(row=5, column=4)
+            
+
           self.ChipTrayWindow.protocol("WM_DELETE_WINDOW", self.closeChipTrayWindow)
+     
+     # Run from both reset button and when reset is the last line of the file
+     def resetChipTrayWindowMethod(self):
+       self.chipStatuses = []
+       for i in range (40):
+           self.chipStatusesLog[i] = None
+           if self.chipTrayCreated:
+               self.chipTrayLabels[i].config(text=f"Chip {i + 1}", bg="lightgray")
                     
 
      # * When window is closed destroies the GUI
@@ -274,6 +318,7 @@ class GUI:
      def closeChipTrayWindow(self):
           self.chipTrayCreated = False
           self.ChipTrayWindow.destroy()
+          self.chipTrayLabels = []
 
           self.showChipTray["state"] = "normal"
 

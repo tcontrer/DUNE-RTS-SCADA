@@ -13,6 +13,14 @@ def stop_robot(GUI):
      GUI.sm.GUIidle = True
      print("GUI idle")
 
+# Changes all the labels of the chip tray window and the corrosponding tracking lists back to their inital values
+def resetChipTrayWindow(GUI):
+       GUI.chipStatuses = []
+       for i in range (40):
+              GUI.chipStatusesLog[i] = None
+              GUI.chipTrayLabels[i].config(text=f"Chip {i + 1}", bg="lightgray")
+
+
 
 # * toBlank button methods
 # Changes state from ground to starting
