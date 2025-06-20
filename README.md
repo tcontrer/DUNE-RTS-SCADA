@@ -250,15 +250,15 @@ The `main.py` file provides a basic test of state transitions. For more comprehe
 
 ## To Do
 
-- Integration with robot software
-- GUI interface for system monitoring
-- Logging and error handling improvements
-- Configuration file support
-- Real-time status monitoring (File I/O)
+- [ ] Integration with robot software
+- [ ] GUI interface for system monitoring
+- [ ] Logging and error handling improvements
+- [ ] Configuration file support
+- [ ] Real-time status monitoring (File I/O)
 
 ## Done
 
-- Basic states/transitions
-- Error states/transitions
-- Pause states/transitions
-- State entry/exit callbacks (`on_enter()` and `on_exit()` methods)
+- [x] Basic states/transitions
+- [x] Error states/transitions
+- [x] Pause states/transitions
+- [x] State entry/exit callbacks (`on_enter()` and `on_exit()` methods)
