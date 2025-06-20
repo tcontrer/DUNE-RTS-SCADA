@@ -14,6 +14,7 @@ class RTSStateMachine(StateMachine):
     writing_to_hwdb = State("Writing to HWDB")
     moving_chip_to_tray = State("Moving Chip to Tray")
     reset = State("Reset")
+    moving_chip_to_bad_tray = State("Moving Chip to Bad Tray")
 
     # Control States
     pause = State("Pause")  # State entered when system encounters an error or manual pause is triggered
@@ -55,9 +56,11 @@ class RTSStateMachine(StateMachine):
         | writing_to_hwdb.to(moving_chip_to_tray)
         | moving_chip_to_tray.to(ground)
         | pause.to(ground)
-        | pause.to(testing)
-        | pause.to(moving_chip_to_tray)
+        | pause.to(surveying_sockets)
         | pause.to(moving_chip_to_socket)
+        | pause.to(testing)
+        | pause.to(writing_to_hwdb)
+        | pause.to(moving_chip_to_tray)
     )
 
     # Pause Transitions
@@ -69,11 +72,20 @@ class RTSStateMachine(StateMachine):
         | testing.to(pause)
         | writing_to_hwdb.to(pause)
         | moving_chip_to_tray.to(pause)
+        | no_server_connection.to(pause)
+        | chip_in_socket.to(pause)
+        | vision_sequence_failed.to(pause)
+        | no_pressure.to(pause)
+        | lost_vacuum.to(pause)
+        | bad_contact.to(pause)
+        | no_chip.to(pause)
+        | safe_guard.to(pause)
+        | no_wib_connection.to(pause)
     )
 
     # Error Transitions
     # Handles fault conditions from operational states to appropriate error states
-    error_transitions = (
+    error_cycle = (
         # Ground state errors
         ground.to(no_server_connection)
         # Socket surveying errors
@@ -91,6 +103,8 @@ class RTSStateMachine(StateMachine):
         # Testing errors
         | testing.to(failed_init)
         | testing.to(no_wib_connection)
+        | failed_init.to(reset)
+        | reset.to(ground)
         # Database errors
         | writing_to_hwdb.to(failed_upload)
         # Chip movement to tray errors
@@ -100,6 +114,11 @@ class RTSStateMachine(StateMachine):
         | moving_chip_to_tray.to(no_chip)
         | moving_chip_to_tray.to(vision_sequence_failed)
         | moving_chip_to_tray.to(safe_guard)
+        | moving_chip_to_bad_tray.to(moving_chip_to_socket)
+        # Other
+        | bad_pins.to(moving_chip_to_bad_tray)
+        | no_serial_number.to(moving_chip_to_bad_tray)
+        | failed_upload.to(moving_chip_to_tray)
     )
 
     # ==================== STATE CALLBACKS ====================
