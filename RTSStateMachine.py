@@ -11,11 +11,37 @@ class RTSStateMachine(StateMachine):
     testing = State("Testing")
     writing_to_hwdb = State("Writing to HWDB")
     moving_chip_to_tray = State("Moving Chip to Tray")
+    reset = State("Reset")
 
     # Fault States
 
     # State entered when system encounters an error or manual pause is triggered
     pause = State("Pause")
+
+    # Error States
+
+    # Ground
+    no_server_connection = State("No Server Connection")
+
+    # Surveying Sockets
+    chip_in_socket = State("Chip in Socket")
+    vision_sequence_failed = State("Vision Sequence Failed") # Moving Chip to Socket and Moving Chip to Tray
+
+    # Moving Chip to Socket and/or Moving Chip to Tray
+    no_pressure = State("No Pressure")
+    lost_vacuum = State("Lost Vacuum")
+    bad_contact = State("Bad Contact")
+    no_chip = State("No Chip")
+    safe_guard = State("Safe Guard")
+    bad_pins = State("Bad Pins")
+    no_serial_number = State("No Serial Number")
+
+    # Testing
+    failed_init = State("Failed Initialization")
+    no_wib_connection = State("No WIB Connection")
+    
+    # HWDB
+    failed_upload = State("Failed Upload")
 
     # Transitions between states during normal operation and recovery from pause
     # Defines the allowed state transitions in the system:
@@ -60,6 +86,36 @@ class RTSStateMachine(StateMachine):
         | writing_to_hwdb.to(pause)
         | moving_chip_to_tray.to(pause)
     )
+
+    # Error Transitions
+    # Defines transitions to error states from operational states
+    # These transitions handle various fault conditions that can occur
+    error_transitions = (
+        # From any operational state to error states
+        ground.to(no_server_connection)
+        | surveying_sockets.to(chip_in_socket)
+        | surveying_sockets.to(vision_sequence_failed)
+        | moving_chip_to_socket.to(no_pressure)
+        | moving_chip_to_socket.to(lost_vacuum)
+        | moving_chip_to_socket.to(bad_contact)
+        | moving_chip_to_socket.to(no_chip)
+        | moving_chip_to_socket.to(vision_sequence_failed)
+        | moving_chip_to_socket.to(safe_guard)
+        | moving_chip_to_socket.to(bad_pins)
+        | moving_chip_to_socket.to(no_serial_number)
+        | testing.to(failed_init)
+        | testing.to(no_wib_connection)
+        | writing_to_hwdb.to(failed_upload)
+        | moving_chip_to_tray.to(no_pressure)
+        | moving_chip_to_tray.to(lost_vacuum)
+        | moving_chip_to_tray.to(bad_contact)
+        | moving_chip_to_tray.to(no_chip)
+        | moving_chip_to_tray.to(vision_sequence_failed)
+        | moving_chip_to_tray.to(safe_guard)
+    )
+
+    # Recovery Transitions
+    # Defines transitions to recover from error states
 
     # Transition Methods - State Entry/Exit Callbacks
     
