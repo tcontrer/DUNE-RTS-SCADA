@@ -8,13 +8,11 @@ The Robotic Test Stand (RTS) State Machine is a Python-based control system that
 
 The system keeps track of states with the following key operations:
 
-1. **Socket Surveying**: Identifies available test sockets
-2. **Chip Movement**: Controls robotic arm to place chips in test sockets
-3. **Testing**: Executes WIB (Warm Interface Board) testing procedures
-4. **Data Management**: Writes test results to hardware database (HWDB)
-5. **Output Handling**: Moves tested chips to output trays
-6. **Error Management**: Handles various fault conditions with appropriate error states
-7. **System Recovery**: Provides mechanisms to recover from errors and pause states
+1. **Socket Surveying**: Inspecting available test sockets
+2. **Chip Movement**: Placing chips in test sockets, moving tested chips to output trays
+3. **Testing**: Executing DAT testing procedures
+4. **Data Management**: Writing test results to hardware database (HWDB)
+5. **Error Management**: Handling various fault conditions with appropriate error states
 
 ### Key Features
 
@@ -25,19 +23,24 @@ The system keeps track of states with the following key operations:
 - **Extensible**: Easy to add new states, transitions, and error conditions as needed
 - **Robust Recovery**: Well-defined recovery paths from error and pause states
 
+## State Diagram
+
+![RTS State Machine Diagram](images/State%20Machine%20Diagram.svg)
+
+
 ## System States
 
 ### Normal Operation States
 - `ground`: Initial/idle state, ready for next operation
-- `surveying_sockets`: Scanning for available test sockets
+- `surveying_sockets`: Inspecting available test socket
 - `moving_chip_to_socket`: Placing chip in identified socket
-- `testing`: Running WIB test procedures
+- `testing`: Running DAT test procedures
 - `writing_to_hwdb`: Storing results in hardware database
 - `moving_chip_to_tray`: Moving tested chip to output location
 - `reset`: System reset state for recovery operations
 
 ### Control States
-- `pause`: System paused (can resume to any operational state)
+- `pause`: System paused
 
 ### Error States
 
@@ -59,10 +62,10 @@ The system keeps track of states with the following key operations:
 
 #### Testing Errors
 - `failed_init`: Test initialization failure
-- `no_wib_connection`: WIB communication error
+- `no_wib_connection`: Warm Interface Board (WIB) communication error
 
 #### Database Errors
-- `failed_upload`: Database write operation failed
+- `failed_upload`: HWDB upload operation failed
 
 ## Project Structure
 
@@ -159,8 +162,7 @@ sm.cycle()  # pause → appropriate_operational_state
 
 # Error handling (triggered by fault detection)
 # Example: Vision system failure during socket surveying
-if vision_system_error_detected:
-    sm.error_transitions()  # surveying_sockets → vision_sequence_failed
+sm.error_transitions()  # surveying_sockets → vision_sequence_failed
 ```
 
 ## State Transition Architecture
@@ -246,17 +248,17 @@ The `main.py` file provides a basic test of state transitions. For more comprehe
 
 - `python-statemachine==2.5.0`: Provides the state machine framework
 
-## Future Enhancements
+## To Do
 
 - Integration with robot software
 - GUI interface for system monitoring
 - Logging and error handling improvements
 - Configuration file support
-- Real-time status monitoring
+- Real-time status monitoring (File I/O)
 
-## Contributing
+## Done
 
-1. Follow the existing code style and structure
-2. Add appropriate state entry/exit callbacks for new states
-3. Update this README when adding significant features
-4. Test state transitions thoroughly before committing
+- Basic states/transitions
+- Error states/transitions
+- Pause states/transitions
+- State entry/exit callbacks (`on_enter()` and `on_exit()` methods)
