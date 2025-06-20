@@ -17,11 +17,13 @@ The system keeps track of states with the following key operations:
 ### Key Features
 
 - **State-based Control**: Uses a finite state machine to ensure predictable operation
-- **Comprehensive Error Handling**: Dedicated error states for different fault conditions
-- **Safety Integration**: Includes pause functionality for emergency stops and error recovery
-- **Modular Design**: Clean separation between states, transitions, and error handling
-- **Extensible**: Easy to add new states, transitions, and error conditions as needed
-- **Robust Recovery**: Well-defined recovery paths from error and pause states
+- **Intelligent Error Recovery**: Contextual recovery paths with no dead-end error states
+- **Advanced Pause/Resume**: Precise state restoration with `before_pause_cycle()` and `resume_to_previous()`
+- **Safety Integration**: Pause capability from any state for emergency stops
+- **Smart Chip Handling**: Automatic routing of defective chips to bad tray
+- **Physical Reseating**: Automated reseating for test initialization failures
+- **Retry Mechanisms**: Automatic retry for transient errors (database uploads, connections)
+- **Rich Feedback**: Comprehensive state callbacks with clear status messages
 
 ## State Diagram
 
@@ -37,7 +39,8 @@ The system keeps track of states with the following key operations:
 - `testing`: Running DAT test procedures
 - `writing_to_hwdb`: Storing results in hardware database
 - `moving_chip_to_tray`: Moving tested chip to output location
-- `reset`: System reset state for recovery operations
+- `moving_chip_to_bad_tray`: Moving defective chip to bad chip tray
+- `reseat`: System reseat state for chip repositioning
 
 ### Control States
 - `pause`: System paused
@@ -66,6 +69,26 @@ The system keeps track of states with the following key operations:
 
 #### Database Errors
 - `failed_upload`: HWDB upload operation failed
+
+## Error Recovery Strategy
+
+The state machine implements intelligent error recovery paths:
+
+### Contextual Recovery Paths
+- **Pin/Serial Number Issues**: `bad_pins` and `no_serial_number` → `moving_chip_to_bad_tray`
+- **Database Upload Failures**: `failed_upload` → `moving_chip_to_tray` (retry mechanism)
+- **Test Initialization Failures**: `failed_init` → `reseat` → `ground` (physical reseating)
+- **Socket Issues**: `chip_in_socket` → `surveying_sockets` (re-survey for empty socket)
+- **Vision Failures**: `vision_sequence_failed` → `surveying_sockets` (restart survey)
+- **Hardware Issues**: `no_pressure`, `lost_vacuum`, `safe_guard` → `ground` (return to safe state)
+- **Communication Issues**: `no_server_connection` → `ground`, `no_wib_connection` → `testing` (retry)
+- **Contact Issues**: `bad_contact` → `moving_chip_to_socket` (retry movement)
+- **Missing Chip**: `no_chip` → `surveying_sockets` (re-survey)
+
+### Manual Recovery Options
+- **Pause from Any State**: All operational and error states can transition to pause
+- **Precise Resume**: Use `before_pause_cycle()` and `resume_to_previous()` for exact state restoration
+- **Contextual Resume**: Each error has a logical recovery path based on operational context
 
 ## Project Structure
 
@@ -111,11 +134,10 @@ DUNE-RTS-SCADA/
    python main.py
    ```
 
-   This will:
-   - Create an instance of the RTS State Machine
-   - Show the current state (initially "Ground")
-   - Execute a state transition to "Surveying Sockets"
-   - Display the new state
+   This will demonstrate:
+   - Complete normal operation cycle (Ground → Surveying → Moving → Testing → Writing → Moving to Tray → Ground)
+   - Advanced pause/resume with precise state restoration
+   - Contextual error recovery showing intelligent error handling
 
 ### Using the State Machine in Your Code
 
@@ -131,15 +153,18 @@ print(f"Current state: {sm.current_state}")
 # Trigger state transitions
 sm.cycle()  # Move to next state in normal flow
 
-# Pause the system
+# Pause the system with previous state tracking
+sm.before_pause_cycle()  # Store current state
 sm.pause_cycle()  # Transition to pause state
 
 # Resume operations (from pause state)
 sm.cycle()  # Resume to appropriate operational state
+# OR resume to exact previous state
+sm.resume_to_previous()  # Return to state before pause
 
 # Handle error transitions (when fault conditions are detected)
 # These would typically be triggered by external monitoring systems
-sm.error_transitions()  # Transition to appropriate error state
+sm.error_cycle()  # Transition to appropriate error state
 ```
 
 ### State Transition Examples
@@ -154,15 +179,22 @@ sm.cycle()  # testing → writing_to_hwdb
 sm.cycle()  # writing_to_hwdb → moving_chip_to_tray
 sm.cycle()  # moving_chip_to_tray → ground (cycle complete)
 
-# Emergency pause from any state
+# Emergency pause with resume to exact previous state
+sm.before_pause_cycle()  # Store current state
 sm.pause_cycle()  # current_state → pause
+sm.resume_to_previous()  # pause → previous_state
 
-# Resume from pause
-sm.cycle()  # pause → appropriate_operational_state
+# Error handling examples
+sm.error_cycle()  # Can trigger various error states based on current state:
+                  # surveying_sockets → vision_sequence_failed
+                  # testing → no_wib_connection
+                  # moving_chip_to_socket → bad_pins → moving_chip_to_bad_tray
 
-# Error handling (triggered by fault detection)
-# Example: Vision system failure during socket surveying
-sm.error_transitions()  # surveying_sockets → vision_sequence_failed
+# Error recovery examples (contextual recovery)
+sm.error_cycle()  # failed_init → reseat → ground (physical reseating)
+sm.error_cycle()  # failed_upload → moving_chip_to_tray (retry mechanism)
+sm.error_cycle()  # chip_in_socket → surveying_sockets (re-survey)
+sm.error_cycle()  # no_pressure → ground (return to safe state)
 ```
 
 ## State Transition Architecture
@@ -179,10 +211,11 @@ The state machine implements three main transition groups:
 - Enables safe system shutdown for maintenance or emergencies
 - Maintains state context for proper resume operation
 
-### 3. Error Transitions (`error_transitions`)
+### 3. Error Transitions (`error_cycle`)
 - Handles fault conditions from each operational state
 - Provides specific error states for different failure modes
 - Enables targeted error recovery and debugging
+- Includes smart recovery paths from error states
 
 ## Development
 
@@ -221,7 +254,7 @@ The state machine implements three main transition groups:
 
 2. Add error transitions from relevant operational states:
    ```python
-   error_transitions = (
+   error_cycle = (
        # ... existing error transitions ...
        | operational_state.to(new_error_state)
    )
@@ -261,3 +294,4 @@ The `main.py` file provides a basic test of state transitions. For more comprehe
 - [x] Error states/transitions
 - [x] Pause states/transitions
 - [x] State entry/exit callbacks (`on_enter()` and `on_exit()` methods)
+- [x] Pause/resume functionality and error handling

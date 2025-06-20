@@ -17,18 +17,23 @@ if __name__ == "__main__":
     sm.cycle()
     print(f"After 3rd cycle: {sm.current_state}")
     
-    # Test pause
-    sm.pause_cycle()
+    # Test advanced pause/resume (precise state restoration)
+    sm.before_pause_cycle()  # Store current state
+    sm.pause_cycle()  # Pause
     print(f"After pause: {sm.current_state}")
     
-    # Resume
-    sm.cycle()
-    print(f"After resume: {sm.current_state}")
+    # Resume to exact previous state
+    sm.resume_to_previous()
+    print(f"After precise resume: {sm.current_state}")
     
-    # Test error handling
+    # Test error handling with contextual recovery
+    print("\n--- Testing Contextual Error Recovery ---")
     sm.error_cycle()
     print(f"After error: {sm.current_state}")
     
-    # Test recovery (if available)
-    # sm.cycle()
-    # print(f"After recovery: {sm.current_state}")
+    # Test recovery from error
+    sm.error_cycle()
+    print(f"After recovery: {sm.current_state}")
+    
+    print("✅ Basic test complete!")
+    print("Note: Error states now have contextual recovery paths!")
