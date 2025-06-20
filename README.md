@@ -1,8 +1,8 @@
-# RTS (Robotic Test System) State Machine
+# Robotic Test Stand (RTS) State Machine
 
 ## Overview
 
-The Robotic Test Stand (RTS) State Machine is a Python-based control system that manages and tracks the operational states of an automated testing platform. It provides a robust state management framework to coordinate robotic movements, testing procedures, and data handling while ensuring safe and predictable system behavior with comprehensive error handling and recovery capabilities.
+The RTS State Machine is a Python-based control system that manages and tracks the operational states of an automated testing platform. It provides a robust state management framework to coordinate robotic movements, testing procedures, and data handling while ensuring safe and predictable system behavior with comprehensive error handling and recovery capabilities.
 
 ## What It Does
 
