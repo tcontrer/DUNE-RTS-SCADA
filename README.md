@@ -253,7 +253,6 @@ The `main.py` file provides a basic test of state transitions. For more comprehe
 - [ ] Integration with robot software
 - [ ] GUI interface for system monitoring
 - [ ] Logging and error handling improvements
-- [ ] Configuration file support
 - [ ] Real-time status monitoring (File I/O)
 
 ## Done
