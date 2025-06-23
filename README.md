@@ -283,6 +283,7 @@ The `main.py` file provides a basic test of state transitions. For more comprehe
 
 ## To Do
 
+- [ ] **Implement user input for pause/resume functionality**
 - [ ] Integration with robot software
 - [ ] GUI interface for system monitoring
 - [ ] Logging and error handling improvements

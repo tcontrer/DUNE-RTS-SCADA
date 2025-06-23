@@ -286,6 +286,9 @@ class RTSStateMachine(StateMachine):
 
     # ==================== ADVANCED PAUSE/RESUME METHODS ====================
     
+    # To do: implement user input for pause/resume functionality
+    # When the state is paused, we want to wait on the user to resume the state machine
+
     def before_pause_cycle(self):
         """Store the current state before pausing for precise resume."""
         self._previous_state = self.current_state
