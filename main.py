@@ -35,5 +35,4 @@ if __name__ == "__main__":
     sm.error_cycle()
     print(f"After recovery: {sm.current_state}")
     
-    print("✅ Basic test complete!")
-    print("Note: Error states now have contextual recovery paths!")
+    print("Basic test complete")
