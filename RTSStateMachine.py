@@ -5,7 +5,16 @@ class RTSStateMachine(StateMachine):
     """RTS State Machine for managing robotic test system operations."""
     
     def __init__(self):
+        """Initialize the RTS State Machine.
+        
+        Sets up the state machine with default values and prepares it for operation.
+        The machine starts in the 'ground' state (defined as initial=True in the state definition).
+        """
+        # Initialize the parent StateMachine class to set up the core state machine functionality
         super().__init__()
+        
+        # Initialize storage for the previous state - used for pause/resume functionality
+        # This allows the system to remember where it was before pausing and resume to that exact state
         self._previous_state = None
 
     # ==================== STATES ====================
@@ -58,8 +67,8 @@ class RTSStateMachine(StateMachine):
         | moving_chip_to_socket.to(testing)
         | testing.to(writing_to_hwdb)
         | writing_to_hwdb.to(moving_chip_to_tray)
-        | moving_chip_to_tray.to(ground)
-        | moving_chip_to_bad_tray.to(ground)
+        | moving_chip_to_tray.to(moving_chip_to_socket)
+        | moving_chip_to_bad_tray.to(moving_chip_to_socket)
         | pause.to(ground)
         | pause.to(surveying_sockets)
         | pause.to(moving_chip_to_socket)
@@ -67,8 +76,9 @@ class RTSStateMachine(StateMachine):
         | pause.to(writing_to_hwdb)
         | pause.to(moving_chip_to_tray)
         | pause.to(moving_chip_to_bad_tray)
-        | pause.to(surveying_sockets)  # Resume from pause to re-survey
-        | reseat.to(ground)
+        | reseat.to(testing)
+        | reseat.to(moving_chip_to_bad_tray)    # have a conditional transition to
+                                                # fmoving chip to bad tray if reseating fails more than 3 times
     )
 
     # Pause Transitions
@@ -224,55 +234,55 @@ class RTSStateMachine(StateMachine):
     
     def on_enter_no_server_connection(self):
         """Called when server connection is lost."""
-        print("❌ ERROR: No server connection detected")
+        print("Error: No server connection detected")
     
     def on_enter_chip_in_socket(self):
         """Called when socket is already occupied."""
-        print("❌ ERROR: Chip already in socket")
+        print("Error: Chip already in socket")
     
     def on_enter_vision_sequence_failed(self):
         """Called when vision system fails."""
-        print("❌ ERROR: Vision sequence failed")
+        print("Error: Vision sequence failed")
     
     def on_enter_no_pressure(self):
         """Called when pressure is lost."""
-        print("❌ ERROR: No pressure detected")
+        print("Error: No pressure detected")
     
     def on_enter_lost_vacuum(self):
         """Called when vacuum is lost."""
-        print("❌ ERROR: Vacuum system failure")
+        print("Error: Vacuum system failure")
     
     def on_enter_bad_contact(self):
         """Called when electrical contact is poor."""
-        print("❌ ERROR: Bad electrical contact")
+        print("Error: Bad electrical contact")
     
     def on_enter_no_chip(self):
         """Called when expected chip is not found."""
-        print("❌ ERROR: No chip detected")
+        print("Error: No chip detected")
     
     def on_enter_safe_guard(self):
         """Called when safety system is triggered."""
-        print("❌ ERROR: Safety guard triggered")
+        print("Error: Safety guard triggered")
     
     def on_enter_bad_pins(self):
         """Called when pin issues are detected."""
-        print("❌ ERROR: Bad pins detected - routing to bad tray")
+        print("Error: Bad pins detected - routing to bad tray")
     
     def on_enter_no_serial_number(self):
         """Called when chip identification fails."""
-        print("❌ ERROR: No serial number - routing to bad tray")
+        print("Error: No serial number - routing to bad tray")
     
     def on_enter_failed_init(self):
         """Called when test initialization fails."""
-        print("❌ ERROR: Test initialization failed - system reseat required")
+        print("Error: Test initialization failed - system reseat required")
     
     def on_enter_no_wib_connection(self):
         """Called when WIB connection fails."""
-        print("❌ ERROR: No WIB connection")
+        print("Error: No WIB connection")
     
     def on_enter_failed_upload(self):
         """Called when database upload fails."""
-        print("❌ ERROR: Failed to upload to database - retrying")
+        print("Error: Failed to upload to database - retrying")
 
     # ==================== ADVANCED PAUSE/RESUME METHODS ====================
     
