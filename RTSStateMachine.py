@@ -3,7 +3,7 @@ from statemachine import StateMachine, State
 
 class RTSStateMachine(StateMachine):
     """RTS State Machine for managing robotic test system operations."""
-    
+
     def __init__(self):
         """Initialize the RTS State Machine.
         
@@ -11,14 +11,14 @@ class RTSStateMachine(StateMachine):
         The machine starts in the 'ground' state (defined as initial=True in the state definition).
         """
         # Initialize the parent StateMachine class to set up the core state machine functionality
-        super().__init__()
-        
+        super().__init__()  # This is the parent class that we are inheriting from
+
         # Initialize storage for the previous state - used for pause/resume functionality
         # This allows the system to remember where it was before pausing and resume to that exact state
         self._previous_state = None
 
     # ==================== STATES ====================
-    
+
     # Normal Operation States
     ground = State("Ground", initial=True)
     surveying_sockets = State("Surveying Sockets")
@@ -30,7 +30,9 @@ class RTSStateMachine(StateMachine):
     moving_chip_to_bad_tray = State("Moving Chip to Bad Tray")
 
     # Control States
-    pause = State("Pause")  # State entered when system encounters an error or manual pause is triggered
+    pause = State(
+        "Pause"
+    )  # State entered when system encounters an error or manual pause is triggered
 
     # ==================== ERROR STATES ====================
 
@@ -39,7 +41,9 @@ class RTSStateMachine(StateMachine):
 
     # Socket Surveying Errors
     chip_in_socket = State("Chip in Socket")
-    vision_sequence_failed = State("Vision Sequence Failed")  # Also applies to chip movement operations
+    vision_sequence_failed = State(
+        "Vision Sequence Failed"
+    )  # Also applies to chip movement operations
 
     # Chip Movement Errors (applies to both socket and tray operations)
     no_pressure = State("No Pressure")
@@ -53,7 +57,7 @@ class RTSStateMachine(StateMachine):
     # Testing Errors
     failed_init = State("Failed Initialization")
     no_wib_connection = State("No WIB Connection")
-    
+
     # Database Errors
     failed_upload = State("Failed Upload")
 
@@ -77,8 +81,26 @@ class RTSStateMachine(StateMachine):
         | pause.to(moving_chip_to_tray)
         | pause.to(moving_chip_to_bad_tray)
         | reseat.to(testing)
-        | reseat.to(moving_chip_to_bad_tray)    # have a conditional transition to
-                                                # fmoving chip to bad tray if reseating fails more than 3 times
+        | reseat.to(moving_chip_to_bad_tray)  # TODO: Conditional to bad tray if reseating fails >3 times
+    )
+
+    # Test Cycle Transitions
+    # Includes normal operation steps with pauses added between each step for debugging/testing
+    test_cycle = (
+        ground.to(pause)
+        | pause.to(surveying_sockets)
+        | surveying_sockets.to(pause)
+        | pause.to(moving_chip_to_socket)
+        | moving_chip_to_socket.to(pause)
+        | pause.to(testing)
+        | testing.to(pause)
+        | pause.to(writing_to_hwdb)
+        | writing_to_hwdb.to(pause)
+        | pause.to(moving_chip_to_tray)
+        | moving_chip_to_tray.to(pause)
+        | pause.to(moving_chip_to_socket)
+        | moving_chip_to_bad_tray.to(pause)
+        | pause.to(moving_chip_to_socket)
     )
 
     # Pause Transitions
@@ -148,7 +170,7 @@ class RTSStateMachine(StateMachine):
         | chip_in_socket.to(surveying_sockets)  # Re-survey to find empty socket
         | vision_sequence_failed.to(surveying_sockets)  # Vision failed, start over
         | no_pressure.to(ground)  # Pressure issue, return to ground
-        | lost_vacuum.to(ground)  # Vacuum issue, return to ground  
+        | lost_vacuum.to(ground)  # Vacuum issue, return to ground
         | bad_contact.to(moving_chip_to_socket)  # Bad contact, retry chip movement
         | no_chip.to(surveying_sockets)  # No chip found, re-survey
         | safe_guard.to(ground)  # Safety triggered, return to safe ground state
@@ -157,67 +179,75 @@ class RTSStateMachine(StateMachine):
     )
 
     # ==================== STATE CALLBACKS ====================
-    
+
     def on_enter_ground(self):
         """Called when entering the ground state - system ready for next operation."""
         print("Entering ground state - system ready")
-    
+
     def on_exit_ground(self):
         """Called when leaving ground state."""
         print("Leaving ground state")
-    
+        self.before_pause_cycle()
+
     def on_enter_surveying_sockets(self):
         """Called when entering socket surveying state."""
         print("Starting socket survey")
-    
+
     def on_exit_surveying_sockets(self):
         """Called when leaving socket surveying state."""
         print("Socket survey complete")
-    
+        self.before_pause_cycle()
+
     def on_enter_moving_chip_to_socket(self):
         """Called when entering chip movement to socket state."""
         print("Moving chip to test socket")
-    
+
     def on_exit_moving_chip_to_socket(self):
         """Called when chip movement to socket is complete."""
         print("Chip placement complete")
-    
+        self.before_pause_cycle()
+
     def on_enter_testing(self):
         """Called when entering testing state."""
         print("Starting WIB testing")
-    
+
     def on_exit_testing(self):
         """Called when testing is complete."""
         print("Testing complete")
-    
+        self.before_pause_cycle()
+
     def on_enter_writing_to_hwdb(self):
         """Called when entering database writing state."""
         print("Writing test results to hardware database")
-    
+
     def on_exit_writing_to_hwdb(self):
         """Called when database writing is complete."""
         print("Database write complete")
-    
+        self.before_pause_cycle()
+
     def on_enter_moving_chip_to_tray(self):
         """Called when entering chip movement to output tray state."""
         print("Moving chip to output tray")
-    
+
     def on_exit_moving_chip_to_tray(self):
         """Called when chip movement to tray is complete."""
         print("Chip moved to tray successfully")
-    
+        self.before_pause_cycle()
+
     def on_enter_pause(self):
         """Called when entering pause state."""
         print("System paused - awaiting resume command")
-    
+        self.pause_with_user_input()
+
     def on_exit_pause(self):
         """Called when leaving pause state."""
         print("Resuming system operation")
+        self.before_pause_cycle()
 
     def on_enter_reseat(self):
         """Called when entering reseat state."""
         print("System reseat initiated - repositioning components")
-    
+
     def on_exit_reseat(self):
         """Called when leaving reseat state."""
         print("Reseat complete - system ready for operation")
@@ -225,75 +255,72 @@ class RTSStateMachine(StateMachine):
     def on_enter_moving_chip_to_bad_tray(self):
         """Called when entering bad tray movement state."""
         print("Moving defective chip to bad tray")
-    
+
     def on_exit_moving_chip_to_bad_tray(self):
         """Called when bad tray movement is complete."""
         print("Chip moved to bad tray - ready for next operation")
+        self.before_pause_cycle()
 
     # ==================== ERROR STATE CALLBACKS ====================
-    
+
     def on_enter_no_server_connection(self):
         """Called when server connection is lost."""
         print("Error: No server connection detected")
-    
+
     def on_enter_chip_in_socket(self):
         """Called when socket is already occupied."""
         print("Error: Chip already in socket")
-    
+
     def on_enter_vision_sequence_failed(self):
         """Called when vision system fails."""
         print("Error: Vision sequence failed")
-    
+
     def on_enter_no_pressure(self):
         """Called when pressure is lost."""
         print("Error: No pressure detected")
-    
+
     def on_enter_lost_vacuum(self):
         """Called when vacuum is lost."""
         print("Error: Vacuum system failure")
-    
+
     def on_enter_bad_contact(self):
         """Called when electrical contact is poor."""
         print("Error: Bad electrical contact")
-    
+
     def on_enter_no_chip(self):
         """Called when expected chip is not found."""
         print("Error: No chip detected")
-    
+
     def on_enter_safe_guard(self):
         """Called when safety system is triggered."""
         print("Error: Safety guard triggered")
-    
+
     def on_enter_bad_pins(self):
         """Called when pin issues are detected."""
         print("Error: Bad pins detected - routing to bad tray")
-    
+
     def on_enter_no_serial_number(self):
         """Called when chip identification fails."""
         print("Error: No serial number - routing to bad tray")
-    
+
     def on_enter_failed_init(self):
         """Called when test initialization fails."""
         print("Error: Test initialization failed - system reseat required")
-    
+
     def on_enter_no_wib_connection(self):
         """Called when WIB connection fails."""
         print("Error: No WIB connection")
-    
+
     def on_enter_failed_upload(self):
         """Called when database upload fails."""
         print("Error: Failed to upload to database - retrying")
 
-    # ==================== ADVANCED PAUSE/RESUME METHODS ====================
-    
-    # To do: implement user input for pause/resume functionality
-    # When the state is paused, we want to wait on the user to resume the state machine
+    # ==================== PAUSE/RESUME METHODS ====================
 
     def before_pause_cycle(self):
         """Store the current state before pausing for precise resume."""
         self._previous_state = self.current_state
-        print(f"Storing current state: {self.current_state}")
-    
+
     def resume_to_previous(self):
         """Resume to the exact state we were in before the pause."""
         if self._previous_state and self.current_state == self.pause:
@@ -303,3 +330,25 @@ class RTSStateMachine(StateMachine):
             self._previous_state = None  # Clear stored state
         else:
             print("No previous state to resume to or not currently paused")
+
+    def pause_with_user_input(self):
+        """Pause the system and wait for user input to resume (resume only)."""
+        # if self.current_state != self.pause:
+        # self.before_pause_cycle()
+        # self.pause_cycle()
+        print(f"\nSYSTEM PAUSED")
+        print(f"Previous state: {self._previous_state}")
+        print("Type 'resume' or 'r' to continue.")
+        while True:
+            try:
+                user_input = input("\nPaused> ").strip().lower()
+                if user_input in ["resume", "r"]:
+                    self.resume_to_previous()
+                    print(f"\nSYSTEM RESUMED")
+                    print(f"Current state: {self.current_state}")
+                    break
+                else:
+                    print("Type 'resume' or 'r' to continue.")
+            except (EOFError, KeyboardInterrupt):
+                print("\n\nReceived interrupt signal. System remains paused.")
+                print("Type 'resume' or 'r' to continue.")
