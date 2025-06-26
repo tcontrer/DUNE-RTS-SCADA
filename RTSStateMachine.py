@@ -17,6 +17,13 @@ class RTSStateMachine(StateMachine):
         # This allows the system to remember where it was before pausing and resume to that exact state
         self._previous_state = None
 
+        # Initialize chip tray position tracking
+        self.col = 1
+        self.row = 1
+        self.reset_on_end = False
+        self.max_col = 10
+        self.max_row = 4
+
     # ==================== STATES ====================
 
     # Normal Operation States
@@ -71,17 +78,18 @@ class RTSStateMachine(StateMachine):
         | moving_chip_to_socket.to(testing)
         | testing.to(writing_to_hwdb)
         | writing_to_hwdb.to(moving_chip_to_tray)
-        | moving_chip_to_tray.to(moving_chip_to_socket)
-        | moving_chip_to_bad_tray.to(moving_chip_to_socket)
-        | pause.to(ground)
-        | pause.to(surveying_sockets)
-        | pause.to(moving_chip_to_socket)
-        | pause.to(testing)
-        | pause.to(writing_to_hwdb)
-        | pause.to(moving_chip_to_tray)
-        | pause.to(moving_chip_to_bad_tray)
-        | reseat.to(testing)
-        | reseat.to(moving_chip_to_bad_tray)  # TODO: Conditional to bad tray if reseating fails >3 times
+        | moving_chip_to_tray.to(ground)
+        # | moving_chip_to_tray.to(moving_chip_to_socket)
+        # | moving_chip_to_bad_tray.to(moving_chip_to_socket)
+        # | pause.to(ground)
+        # | pause.to(surveying_sockets)
+        # | pause.to(moving_chip_to_socket)
+        # | pause.to(testing)
+        # | pause.to(writing_to_hwdb)
+        # | pause.to(moving_chip_to_tray)
+        # | pause.to(moving_chip_to_bad_tray)
+        # | reseat.to(testing)
+        # | reseat.to(moving_chip_to_bad_tray)  # TODO: Conditional to bad tray if reseating fails >3 times
     )
 
     # Test Cycle Transitions
@@ -187,7 +195,7 @@ class RTSStateMachine(StateMachine):
     def on_exit_ground(self):
         """Called when leaving ground state."""
         print("Leaving ground state")
-        self.before_pause_cycle()
+        # self.before_pause_cycle() # uncomment when using test_cycle
 
     def on_enter_surveying_sockets(self):
         """Called when entering socket surveying state."""
@@ -196,7 +204,7 @@ class RTSStateMachine(StateMachine):
     def on_exit_surveying_sockets(self):
         """Called when leaving socket surveying state."""
         print("Socket survey complete")
-        self.before_pause_cycle()
+        # self.before_pause_cycle() # uncomment when using test_cycle
 
     def on_enter_moving_chip_to_socket(self):
         """Called when entering chip movement to socket state."""
@@ -205,7 +213,7 @@ class RTSStateMachine(StateMachine):
     def on_exit_moving_chip_to_socket(self):
         """Called when chip movement to socket is complete."""
         print("Chip placement complete")
-        self.before_pause_cycle()
+        # self.before_pause_cycle() # uncomment when using test_cycle
 
     def on_enter_testing(self):
         """Called when entering testing state."""
@@ -214,7 +222,7 @@ class RTSStateMachine(StateMachine):
     def on_exit_testing(self):
         """Called when testing is complete."""
         print("Testing complete")
-        self.before_pause_cycle()
+        # self.before_pause_cycle() # uncomment when using test_cycle
 
     def on_enter_writing_to_hwdb(self):
         """Called when entering database writing state."""
@@ -223,16 +231,16 @@ class RTSStateMachine(StateMachine):
     def on_exit_writing_to_hwdb(self):
         """Called when database writing is complete."""
         print("Database write complete")
-        self.before_pause_cycle()
+        # self.before_pause_cycle() # uncomment when using test_cycle
 
     def on_enter_moving_chip_to_tray(self):
-        """Called when entering chip movement to output tray state."""
-        print("Moving chip to output tray")
+        """Called when entering chip movement to tray state."""
+        print("Moving chip to tray")
 
     def on_exit_moving_chip_to_tray(self):
         """Called when chip movement to tray is complete."""
         print("Chip moved to tray successfully")
-        self.before_pause_cycle()
+        # self.before_pause_cycle() # uncomment when using test_cycle
 
     def on_enter_pause(self):
         """Called when entering pause state."""
@@ -242,7 +250,7 @@ class RTSStateMachine(StateMachine):
     def on_exit_pause(self):
         """Called when leaving pause state."""
         print("Resuming system operation")
-        self.before_pause_cycle()
+        # self.before_pause_cycle() # uncomment when using test_cycle
 
     def on_enter_reseat(self):
         """Called when entering reseat state."""
@@ -259,7 +267,7 @@ class RTSStateMachine(StateMachine):
     def on_exit_moving_chip_to_bad_tray(self):
         """Called when bad tray movement is complete."""
         print("Chip moved to bad tray - ready for next operation")
-        self.before_pause_cycle()
+        # self.before_pause_cycle() # uncomment when using test_cycle
 
     # ==================== ERROR STATE CALLBACKS ====================
 
@@ -352,3 +360,57 @@ class RTSStateMachine(StateMachine):
             except (EOFError, KeyboardInterrupt):
                 print("\n\nReceived interrupt signal. System remains paused.")
                 print("Type 'resume' or 'r' to continue.")
+
+    # ==================== CHIP MANAGEMENT METHODS ====================
+
+    def advance(self):
+        """Advance to the next chip position on the tray."""
+        if self.row < self.max_row:
+            self.row += 1
+        elif self.col < self.max_col:
+            self.col += 1
+            self.row = 1
+        elif self.reset_on_end:
+            self.col = 1
+            self.row = 1
+        else:
+            raise StopIteration("Reached the end of the tray.")
+
+    def get_position(self):
+        """Get the current chip position on the tray."""
+        return (self.col, self.row)
+
+    def advance_chip_position(self):
+        """Advance to the next chip position on the tray."""
+        try:
+            self.advance()
+            print(f"Advanced to chip position: {self.get_position()}")
+        except StopIteration:
+            print("Reached the end of the tray. Starting over.")
+            self.col = 1
+            self.row = 1
+
+    def reset_tray_position(self):
+        """Reset the chip position to the beginning of the tray."""
+        self.col = 1
+        self.row = 1
+        print("Reset chip position to (1, 1)")
+
+    def is_tray_complete(self):
+        """Check if we've processed all positions on the tray."""
+        return self.col == self.max_col and self.row == self.max_row
+
+    def run_full_cycle(self):
+        """Run a full test cycle for one chip and then advance to the next chip position."""
+        print(f"Starting full cycle at position {self.get_position()}")
+        for i in range(6):
+            self.cycle()
+        print("Full cycle complete, advancing chip position")
+        self.advance_chip_position()
+    
+    def handle_tray(self):
+        """Run a full test cycle for all 40 chips on the tray."""
+        for i in range(40):
+            print(f"\n--- Processing chip {i+1}/40 ---")
+            self.run_full_cycle()
+        print(f"\nTray processing complete! Processed 40 chips.")
