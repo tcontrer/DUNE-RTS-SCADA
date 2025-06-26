@@ -20,7 +20,6 @@ class RTSStateMachine(StateMachine):
         # Initialize chip tray position tracking
         self.col = 1
         self.row = 1
-        self.reset_on_end = False
         self.max_col = 10
         self.max_row = 4
 
@@ -363,15 +362,18 @@ class RTSStateMachine(StateMachine):
 
     # ==================== CHIP MANAGEMENT METHODS ====================
 
+    # Tray:
+    #   (1,4) (2,4) (3,4) ... (10,4)
+    #   (1,3) (2,3) (3,3) ... (10,3)
+    #   (1,2) (2,2) (3,2) ... (10,2)
+    #   (1,1) (2,1) (3,1) ... (10,1)
+
     def advance(self):
         """Advance to the next chip position on the tray."""
         if self.row < self.max_row:
             self.row += 1
         elif self.col < self.max_col:
             self.col += 1
-            self.row = 1
-        elif self.reset_on_end:
-            self.col = 1
             self.row = 1
         else:
             raise StopIteration("Reached the end of the tray.")
