@@ -7,10 +7,22 @@ class RTSStateMachine(StateMachine):
 
         self.last_normal_state = None
 
-        self.col = 1
-        self.row = 1
+        # Replace individual position tracking with dictionary-based approach
+        self.chip_positions = {
+            'col': [],
+            'row': []
+        }
+        
+        # Initialize with 40 chip positions (10 columns × 4 rows)
         self.max_col = 10
         self.max_row = 4
+        self.current_chip_index = 0
+        
+        # Populate the chip_positions dictionary
+        for col in range(1, self.max_col + 1):
+            for row in range(1, self.max_row + 1):
+                self.chip_positions['col'].append(col)
+                self.chip_positions['row'].append(row)
 
     # Normal states
 
@@ -307,17 +319,14 @@ class RTSStateMachine(StateMachine):
 
     def advance(self):
         """Advance to the next chip position on the tray."""
-        if self.row < self.max_row:
-            self.row += 1
-        elif self.col < self.max_col:
-            self.col += 1
-            self.row = 1
+        if self.current_chip_index < len(self.chip_positions['col']) - 1:
+            self.current_chip_index += 1
         else:
             raise StopIteration("Reached the end of the tray.")
 
     def get_position(self):
         """Get the current chip position on the tray."""
-        return (self.col, self.row)
+        return (self.chip_positions['col'][self.current_chip_index], self.chip_positions['row'][self.current_chip_index])
 
     def advance_chip_position(self):
         """Advance to the next chip position on the tray."""
@@ -326,18 +335,16 @@ class RTSStateMachine(StateMachine):
             print(f"Advanced to chip position: {self.get_position()}")
         except StopIteration:
             print("Reached the end of the tray. Starting over.")
-            self.col = 1
-            self.row = 1
+            self.current_chip_index = 0
 
     def reset_tray_position(self):
         """Reset the chip position to the beginning of the tray."""
-        self.col = 1
-        self.row = 1
+        self.current_chip_index = 0
         print("Reset chip position to (1, 1)")
 
     def is_tray_complete(self):
         """Check if we've processed all positions on the tray."""
-        return self.col == self.max_col and self.row == self.max_row
+        return self.current_chip_index == len(self.chip_positions['col']) - 1
 
     def run_full_cycle(self):
         """Run a full test cycle for one chip and then advance to the next chip position."""
@@ -353,3 +360,18 @@ class RTSStateMachine(StateMachine):
             print(f"\n--- Processing chip {i+1}/40 ---")
             self.run_full_cycle()
         print(f"\nTray processing complete! Processed 40 chips.")
+
+    def get_current_chip_data(self):
+        """Get all data for the current chip."""
+        return {
+            'col': self.chip_positions['col'][self.current_chip_index],
+            'row': self.chip_positions['row'][self.current_chip_index],
+            'index': self.current_chip_index
+        }
+    
+    def set_chip_data(self, index, col=None, row=None):
+        """Set data for a specific chip at the given index."""
+        if col is not None:
+            self.chip_positions['col'][index] = col
+        if row is not None:
+            self.chip_positions['row'][index] = row

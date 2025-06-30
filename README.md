@@ -47,10 +47,10 @@ Manages the testing cycle for electronic chips on a 4×10 tray:
 
 ## Chip Tray System
 
-The system tracks chip positions on a 4×10 tray in column-wise order:
-- **40 total positions**: 10 columns × 4 rows
-- **Position tracking**: (col, row) from (1,1) to (10,4)
-- **Automatic advancement**: Moves to next position after each cycle
+The system now tracks chip positions using a dictionary-based approach:
+- **chip_positions**: A dictionary with two lists: `'col'` and `'row'`, each of length 40 (10 columns × 4 rows)
+- **Position tracking**: Each index corresponds to a unique chip position, with `chip_positions['col'][i]` and `chip_positions['row'][i]` giving the column and row for chip `i`
+- **Automatic advancement**: The state machine uses `current_chip_index` to keep track of which chip is being processed
 - **Tray completion**: Handles end-of-tray logic with automatic reset
 
 ## Pause/Resume System
@@ -108,6 +108,19 @@ sm.advance_to_next_in_cycle()  # Resume and advance one step
 - `is_tray_complete()`: Check if at final position (10,4)
 - `run_full_cycle()`: Run 6 cycles for one chip, then advance
 - `handle_tray()`: Process all 40 chips on the tray
+- `get_current_chip_data()`: Returns a dictionary with the current chip's column, row, and index
+- `set_chip_data(index, col=None, row=None)`: Set the column and/or row for a specific chip index
+
+### Example: Accessing and Modifying Chip Data
+
+```python
+# Get current chip's data as a dictionary
+chip_data = sm.get_current_chip_data()
+print(chip_data)  # {'col': 1, 'row': 1, 'index': 0}
+
+# Set the column and row for chip at index 5
+sm.set_chip_data(5, col=3, row=2)
+```
 
 ### Pause/Resume Control
 - `resume_to_previous()`: Resume to last recorded normal state
