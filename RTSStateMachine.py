@@ -18,6 +18,10 @@ class RTSStateMachine(StateMachine):
         self.max_row = 4
         self.current_chip_index = 0
         
+        # chip_positions = {
+        # 'col': [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, ..., 10, 10, 10, 10],
+        # 'row': [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, ..., 1, 2, 3, 4]
+        # }
         # Populate the chip_positions dictionary
         for col in range(1, self.max_col + 1):
             for row in range(1, self.max_row + 1):
