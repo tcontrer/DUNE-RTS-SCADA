@@ -318,7 +318,7 @@ class RTSStateMachine(StateMachine):
                     break
             except (EOFError, KeyboardInterrupt):
                 print("\n\nReceived interrupt signal. System remains paused.")
-                print("Type 1, 2, or 3 to continue.")
+                print("Type 1, 2, 3, or 4 to continue.")
 
 
     def advance(self):
