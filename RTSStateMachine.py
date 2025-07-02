@@ -1,4 +1,7 @@
 from statemachine import StateMachine, State
+from FNAL_RTS_integration import MoveChipsToSockets
+from RTS_CFG import RTS_CFG
+import sys
 
 class RTSStateMachine(StateMachine):
 
@@ -9,8 +12,12 @@ class RTSStateMachine(StateMachine):
 
         # Replace individual position tracking with dictionary-based approach
         self.chip_positions = {
+            'tray': [],
             'col': [],
-            'row': []
+            'row': [],
+            'dat': [],
+            'dat_socket': [],
+            'label': []
         }
         
         # Initialize with 40 chip positions (10 columns × 4 rows)
@@ -18,15 +25,20 @@ class RTSStateMachine(StateMachine):
         self.max_row = 4
         self.current_chip_index = 0
         
-        # chip_positions = {
-        # 'col': [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, ..., 10, 10, 10, 10],
-        # 'row': [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, ..., 1, 2, 3, 4]
-        # }
         # Populate the chip_positions dictionary
         for col in range(1, self.max_col + 1):
             for row in range(1, self.max_row + 1):
                 self.chip_positions['col'].append(col)
                 self.chip_positions['row'].append(row)
+                # Add default values for other required keys
+                self.chip_positions['tray'].append(2)
+                self.chip_positions['dat'].append(2)
+                self.chip_positions['dat_socket'].append(1)
+                self.chip_positions['label'].append(1)
+        
+        # Initialize RTS connection
+        # self.rts = RTS_CFG()
+        # self.rts.rts_init(port=201, host_ip='192.168.121.1')
 
     # Normal states
 
@@ -107,14 +119,6 @@ class RTSStateMachine(StateMachine):
         | failed_init.to(pause)
         | no_wib_connection.to(pause)
         | failed_upload.to(pause)
-        | pause.to(ground)
-        | pause.to(surveying_sockets)
-        | pause.to(moving_chip_to_socket)
-        | pause.to(testing)
-        | pause.to(writing_to_hwdb)
-        | pause.to(moving_chip_to_tray)
-        | pause.to(moving_chip_to_bad_tray)
-
     )
 
     error_cycle = (
@@ -132,7 +136,6 @@ class RTSStateMachine(StateMachine):
         | testing.to(failed_init)
         | testing.to(no_wib_connection)
         | failed_init.to(reseat)
-        | reseat.to(ground)
         | writing_to_hwdb.to(failed_upload)
         | moving_chip_to_tray.to(no_pressure)
         | moving_chip_to_tray.to(lost_vacuum)
@@ -146,12 +149,18 @@ class RTSStateMachine(StateMachine):
         | failed_upload.to(moving_chip_to_tray)
         | chip_in_socket.to(surveying_sockets)
         | vision_sequence_failed.to(surveying_sockets)
-        | no_pressure.to(ground)
-        | lost_vacuum.to(ground)
         | bad_contact.to(moving_chip_to_socket)
         | no_chip.to(surveying_sockets)
-        | safe_guard.to(ground)
         | no_wib_connection.to(testing)
+    )
+
+    reset_cycle = (
+        pause.to(ground)
+        | reseat.to(ground)
+        | moving_chip_to_bad_tray.to(ground)
+        | no_pressure.to(ground)
+        | lost_vacuum.to(ground)
+        | safe_guard.to(ground)
         | no_server_connection.to(ground)
     )
 
@@ -159,121 +168,83 @@ class RTSStateMachine(StateMachine):
         print("Entering ground state - system ready")
         self.last_normal_state = self.current_state
 
-    def on_exit_ground(self):
-        print("Leaving ground state")
-
     def on_enter_surveying_sockets(self):
-        print("Starting socket survey")
+        print("Starting to survey sockets")
         self.last_normal_state = self.current_state
-
-    def on_exit_surveying_sockets(self):
-        print("Socket survey complete")
 
     def on_enter_moving_chip_to_socket(self):
         print("Moving chip to test socket")
         self.last_normal_state = self.current_state
 
-    def on_exit_moving_chip_to_socket(self): 
-        print("Chip placement complete")
-
     def on_enter_testing(self):
-        print("Starting WIB testing")
+        print("Starting chip testing")
         self.last_normal_state = self.current_state
-    
-    def on_exit_testing(self):
-        print("Testing complete")
 
     def on_enter_writing_to_hwdb(self):
-        print("Writing test results to hardware database")
+        print("Writing test results to HWDB")
         self.last_normal_state = self.current_state
-
-    def on_exit_writing_to_hwdb(self):
-        print("HWDB writing complete")
 
     def on_enter_moving_chip_to_tray(self):
         print("Moving chip to tray")
         self.last_normal_state = self.current_state
-
-    def on_exit_moving_chip_to_tray(self):
-        print("Chip moved to tray successfully")
+        
+        # Call MoveChipsToSockets with current chip position
+        # TODO: BypassRTS check
+        # try:
+        #     MoveChipsToSockets(self.rts, self.chip_positions)
+        # except Exception as e:
+        #     print(f"Error calling MoveChipsToSockets: {e}")
 
     def on_enter_pause(self):
         print("System paused - awaiting resume command")
         self.pause_with_user_input()
 
-    def on_exit_pause(self):
-        """Called when leaving pause state."""
-        print("Resuming system operation")
-        # self.before_pause_cycle() # uncomment when using test_cycle
-
     def on_enter_reseat(self):
-        """Called when entering reseat state."""
         print("System reseat initiated - repositioning components")
 
-    def on_exit_reseat(self):
-        """Called when leaving reseat state."""
-        print("Reseat complete - system ready for operation")
-
     def on_enter_moving_chip_to_bad_tray(self):
-        """Called when entering bad tray movement state."""
-        print("Moving defective chip to bad tray")
-
-    def on_exit_moving_chip_to_bad_tray(self):
-        """Called when bad tray movement is complete."""
-        print("Chip moved to bad tray - ready for next operation")
+        print("Moved defective chip to bad tray")
 
     def on_enter_no_server_connection(self):
-        """Called when server connection is lost."""
         print("Error: No server connection detected")
 
     def on_enter_chip_in_socket(self):
-        """Called when socket is already occupied."""
         print("Error: Chip already in socket")
 
     def on_enter_vision_sequence_failed(self):
-        """Called when vision system fails."""
         print("Error: Vision sequence failed")
 
     def on_enter_no_pressure(self):
-        """Called when pressure is lost."""
         print("Error: No pressure detected")
 
     def on_enter_lost_vacuum(self):
-        """Called when vacuum is lost."""
         print("Error: Vacuum system failure")
 
     def on_enter_bad_contact(self):
-        """Called when electrical contact is poor."""
-        print("Error: Bad electrical contact")
+        print("Error: Bad socket contact")
 
-    def on_enter_no_chip(self):
-        """Called when expected chip is not found."""
+    def on_enter_no_chip(self): 
         print("Error: No chip detected")
 
     def on_enter_safe_guard(self):
-        """Called when safety system is triggered."""
         print("Error: Safety guard triggered")
 
     def on_enter_bad_pins(self):
-        """Called when pin issues are detected."""
-        print("Error: Bad pins detected - routing to bad tray")
+        print("Error: Bad pins detected")
 
     def on_enter_no_serial_number(self):
-        """Called when chip identification fails."""
-        print("Error: No serial number - routing to bad tray")
+        print("Error: No serial number")
 
     def on_enter_failed_init(self):
-        """Called when test initialization fails."""
-        print("Error: Test initialization failed - system reseat required")
+        print("Error: Test initialization failed")
 
     def on_enter_no_wib_connection(self):
-        """Called when WIB connection fails."""
         print("Error: No WIB connection")
 
     def on_enter_failed_upload(self):
-        """Called when database upload fails."""
-        print("Error: Failed to upload to database - retrying")
+        print("Error: Failed to upload to HWDB")
 
+    # Pause methods
     def resume_to_previous(self):
         if self.last_normal_state:
             self.current_state = self.last_normal_state
@@ -301,7 +272,7 @@ class RTSStateMachine(StateMachine):
             try:
                 user_input = input("").strip().lower()
                 if user_input == "1":
-                    self.pause_cycle()
+                    self.current_state = self.ground
                     print(f"Resumed to Ground state")
                     print(f"Current state: {self.current_state}")
                     break
@@ -315,7 +286,7 @@ class RTSStateMachine(StateMachine):
                     break
                 elif user_input == "4":
                     print("Exiting system...")
-                    break
+                    sys.exit()
             except (EOFError, KeyboardInterrupt):
                 print("\n\nReceived interrupt signal. System remains paused.")
                 print("Type 1, 2, 3, or 4 to continue.")
