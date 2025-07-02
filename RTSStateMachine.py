@@ -2,12 +2,15 @@ from statemachine import StateMachine, State
 from FNAL_RTS_integration import MoveChipsToSockets
 from RTS_CFG import RTS_CFG
 import sys
+import os
+from datetime import datetime
 
 class RTSStateMachine(StateMachine):
 
     def __init__(self):
         super().__init__()
 
+        self.BypassRTS = True  # Set to False to use real hardware functions
         self.last_normal_state = None
 
         # Replace individual position tracking with dictionary-based approach
@@ -25,20 +28,54 @@ class RTSStateMachine(StateMachine):
         self.max_row = 4
         self.current_chip_index = 0
         
-        # Populate the chip_positions dictionary
-        for col in range(1, self.max_col + 1):
-            for row in range(1, self.max_row + 1):
-                self.chip_positions['col'].append(col)
-                self.chip_positions['row'].append(row)
-                # Add default values for other required keys
-                self.chip_positions['tray'].append(2)
-                self.chip_positions['dat'].append(2)
-                self.chip_positions['dat_socket'].append(1)
-                self.chip_positions['label'].append(1)
+        # Populate the chip_positions dictionary for a full tray
+        self.populate_full_tray()
         
         # Initialize RTS connection
         # self.rts = RTS_CFG()
         # self.rts.rts_init(port=201, host_ip='192.168.121.1')
+
+    def populate_full_tray(self):
+        """Populate chip_positions for a full tray (10 columns × 4 rows)."""
+        # Clear existing lists
+        for key in self.chip_positions:
+            self.chip_positions[key] = []
+        chip_counter = 0
+        for col in range(1, self.max_col + 1):
+            for row in range(1, self.max_row + 1):
+                self.chip_positions['col'].append(col)
+                self.chip_positions['row'].append(row)
+                self.chip_positions['tray'].append(2)
+                self.chip_positions['dat'].append(2)
+                if chip_counter % 2 == 0:
+                    self.chip_positions['dat_socket'].append(21)
+                    self.chip_positions['label'].append('CD0')
+                else:
+                    self.chip_positions['dat_socket'].append(22)
+                    self.chip_positions['label'].append('CD1')
+                chip_counter += 1
+
+    def populate_from_dicts(self, chip_list):
+        """
+        Populate chip_positions from a list of chip dictionaries.
+
+        Args:
+            chip_list (list of dict): Each dict should have keys matching chip_positions fields
+                (e.g., 'tray', 'col', 'row', 'dat', 'dat_socket', 'label').
+                Missing keys default to None.
+
+        Example:
+            chip_list = [
+                {'tray': 2, 'col': 1, 'row': 1, 'dat': 2, 'dat_socket': 21, 'label': 'CD0'},
+                {'tray': 2, 'col': 1, 'row': 2, 'dat': 2, 'dat_socket': 22, 'label': 'CD1'}
+            ]
+        """
+        # Clear existing
+        for key in self.chip_positions:
+            self.chip_positions[key] = []
+        for chip in chip_list:
+            for key in self.chip_positions:
+                self.chip_positions[key].append(chip.get(key, None))
 
     # Normal states
 
@@ -164,7 +201,16 @@ class RTSStateMachine(StateMachine):
         | no_server_connection.to(ground)
     )
 
+    def create_session_folder(self):
+        """Create a new folder in 'images/' named with the current date and time."""
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        folder_name = f'session_{timestamp}'
+        folder_path = os.path.join(folder_name)
+        os.makedirs(folder_path, exist_ok=True)
+        self.current_session_folder = folder_path
+
     def on_enter_ground(self):
+        self.create_session_folder()
         print("Entering ground state - system ready")
         self.last_normal_state = self.current_state
 
@@ -175,6 +221,15 @@ class RTSStateMachine(StateMachine):
     def on_enter_moving_chip_to_socket(self):
         print("Moving chip to test socket")
         self.last_normal_state = self.current_state
+
+        # Call MoveChipsToSockets with current chip position
+        if self.BypassRTS:
+            print("[SIMULATION] Moving chip to socket")
+        else:
+            try:
+                MoveChipsToSockets(self.rts, self.chip_positions)
+            except Exception as e:
+                print(f"Error calling MoveChipsToSockets: {e}")
 
     def on_enter_testing(self):
         print("Starting chip testing")
@@ -187,13 +242,6 @@ class RTSStateMachine(StateMachine):
     def on_enter_moving_chip_to_tray(self):
         print("Moving chip to tray")
         self.last_normal_state = self.current_state
-        
-        # Call MoveChipsToSockets with current chip position
-        # TODO: BypassRTS check
-        # try:
-        #     MoveChipsToSockets(self.rts, self.chip_positions)
-        # except Exception as e:
-        #     print(f"Error calling MoveChipsToSockets: {e}")
 
     def on_enter_pause(self):
         print("System paused - awaiting resume command")

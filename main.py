@@ -1,15 +1,25 @@
 import RTSStateMachine as RTSSM
 
 if __name__ == "__main__":
-    sm = RTSSM.RTSStateMachine() # ground
-    # sm.cycle()                   # surveying socket
-    # sm.cycle()                   # moving to socket
-    # sm.cycle()                   # testing
-    # sm.pause_cycle()             # pause
-    # sm.cycle()                   # (1) ground (2) testing (3) writing to HWDB (4) quit
-    # sm.pause_cycle()
-    # sm.cycle()
+    sm = RTSSM.RTSStateMachine()
+    print(f"Initial state: {sm.current_state}")
 
-    # sm.handle_tray()
+    # Test with BypassRTS True (simulation)
+    sm.BypassRTS = True
+    print("\n[TEST] BypassRTS = True (Simulation Mode)")
+    sm.cycle()  # Surveying Sockets
+    sm.cycle()  # Moving Chip to Socket
+    sm.cycle()  # Testing
+    sm.cycle()  # Writing to HWDB
+    sm.cycle()  # Moving Chip to Tray (should print simulation message)
+    sm.cycle()  # Back to Ground
 
-    sm.cycle()
+    # Test with BypassRTS False (real hardware call)
+    sm.BypassRTS = False
+    print("\n[TEST] BypassRTS = False (Real Hardware Mode)")
+    sm.cycle()  # Surveying Sockets
+    sm.cycle()  # Moving Chip to Socket
+    sm.cycle()  # Testing
+    sm.cycle()  # Writing to HWDB
+    sm.cycle()  # Moving Chip to Tray (should attempt real function)
+    sm.cycle()  # Back to Ground

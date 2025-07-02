@@ -1,12 +1,3 @@
-## Recent Changes
-
-- **Chip Position Tracking:** Now uses a dictionary (`chip_positions`) to manage all chip-related data for 40 positions (10 columns × 4 rows).
-- **State Machine Refactor:** States and transitions are more clearly defined and grouped (normal, pause, error, reset).
-- **Pause/Resume:** Improved interactive pause menu, with options to resume, advance, or return to ground state. The last normal state is tracked for accurate resumption.
-- **Tray Handling:** Methods for advancing, resetting, and checking chip positions on the tray.
-- **Integration Points:** Hooks for hardware integration (e.g., `MoveChipsToSockets`) are present and can be enabled as needed (still WIP).
-- **Error Handling:** Expanded error states and transitions for robust operation.
-
 # DUNE-RTS-SCADA
 
 A simple state machine for automated chip testing using a robotic test stand.
@@ -145,5 +136,15 @@ sm.set_chip_data(5, col=3, row=2)
 
 ## Status
 
-**Done**: Simplified state machine, advanced pause/resume with interactive menu, chip tray positioning, automated testing cycles, error handling
-**Next**: Fix transition logic, Integration with actual hardware systems
+### TODO
+- **Log-Driven State Transitions:** Add support for monitoring a log file and triggering state transitions automatically when a log line matches a state name, enabling seamless integration with external robot software.
+
+## Recent Changes
+
+- **Session Folder Creation:** Each time the system enters the ground state, a new folder is created in the 'images/' directory, named with the current date and time, to store session-specific data (e.g., OCR images).
+- **Chip Position Tracking:** Now uses a dictionary (`chip_positions`) to manage all chip-related data for 40 positions (10 columns × 4 rows).
+- **State Machine Refactor:** States and transitions are more clearly defined and grouped (normal, pause, error, reset).
+- **Pause/Resume:** Improved interactive pause menu, with options to resume, advance, or return to ground state. The last normal state is tracked for accurate resumption.
+- **Tray Handling:** Methods for advancing, resetting, and checking chip positions on the tray.
+- **Integration Points:** Hooks for hardware integration (e.g., `MoveChipsToSockets`) are present and can be enabled as needed (still WIP).
+- **Error Handling:** Expanded error states and transitions for robust operation.
