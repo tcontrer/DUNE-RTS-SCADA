@@ -4,6 +4,7 @@ from RTS_CFG import RTS_CFG
 import sys
 import os
 from datetime import datetime
+import time
 
 class RTSStateMachine(StateMachine):
 
@@ -201,14 +202,6 @@ class RTSStateMachine(StateMachine):
         | no_server_connection.to(ground)
     )
 
-    def create_session_folder(self):
-        """Create a new folder in 'images/' named with the current date and time."""
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        folder_name = f'session_{timestamp}'
-        folder_path = os.path.join(folder_name)
-        os.makedirs(folder_path, exist_ok=True)
-        self.current_session_folder = folder_path
-
     def on_enter_ground(self):
         self.create_session_folder()
         print("Entering ground state - system ready")
@@ -398,3 +391,69 @@ class RTSStateMachine(StateMachine):
             self.chip_positions['col'][index] = col
         if row is not None:
             self.chip_positions['row'][index] = row
+
+    def create_session_folder(self):
+        """Create a new folder in 'images/' named with the current date and time."""
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        folder_name = f'session_{timestamp}'
+        folder_path = os.path.join(folder_name)
+        os.makedirs(folder_path, exist_ok=True)
+        self.current_session_folder = folder_path
+
+    def read_log_and_transition(self, log_path):
+        """
+        Periodically read a log file and transition the state machine to the state specified in each new line.
+        Args:
+            log_path (str): Path to the log file.
+        """
+        # Map log strings to state attributes
+        state_map = {
+            "ground": self.ground,
+            "surveying_sockets": self.surveying_sockets,
+            "moving_chip_to_socket": self.moving_chip_to_socket,
+            "testing": self.testing,
+            "writing_to_hwdb": self.writing_to_hwdb,
+            "reseat": self.reseat,
+            "moving_chip_to_bad_tray": self.moving_chip_to_bad_tray,
+            "pause": self.pause,
+            "no_server_connection": self.no_server_connection,
+            "chip_in_socket": self.chip_in_socket,
+            "vision_sequence_failed": self.vision_sequence_failed,
+            "no_pressure": self.no_pressure,
+            "lost_vacuum": self.lost_vacuum,
+            "bad_contact": self.bad_contact,
+            "no_chip": self.no_chip,
+            "safe_guard": self.safe_guard,
+            "bad_pins": self.bad_pins,
+            "no_serial_number": self.no_serial_number,
+            "failed_init": self.failed_init,
+            "no_wib_connection": self.no_wib_connection,
+            "failed_upload": self.failed_upload,
+        }
+        last_line = 0
+        print(f"Monitoring log file: {log_path}")
+        while True:
+            try:
+                if not os.path.exists(log_path):
+                    print(f"Log file does not exist: {log_path}")
+                    time.sleep(1)
+                    continue
+                with open(log_path, 'r') as f:
+                    lines = f.readlines()
+                # Process only new lines
+                new_lines = lines[last_line:]
+                for line in new_lines:
+                    state_str = line.strip().lower()
+                    if state_str in state_map:
+                        # Only transition if not already in that state
+                        if self.current_state != state_map[state_str]:
+                            self.current_state = state_map[state_str]
+                            print(f"Transitioned to state: {self.current_state}")
+                last_line = len(lines)
+                time.sleep(1)
+            except KeyboardInterrupt:
+                print("\nStopped log monitoring.")
+                break
+            except Exception as e:
+                print(f"Error reading log file: {e}")
+                time.sleep(1)
