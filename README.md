@@ -1,17 +1,12 @@
 # DUNE-RTS-SCADA
 
-A simple state machine for automated chip testing using a robotic test stand.
+## Overview
+This project implements a state machine for chip handling and testing automation, with support for both simulation and real hardware integration.
 
 ## What it does
-
-Manages the testing cycle for electronic chips on a 4×10 tray:
-1. Survey available test sockets
-2. Move chip to socket
-3. Run WIB testing
-4. Write results to database
-5. Move chip to output tray
-6. Return to start for next chip
-7. Advance to next position on tray (column-wise: 1,1 → 1,2 → ... → 10,4)
+- **Automated Chip Testing:** The system automatically moves chips from a tray to test sockets, performs testing, and returns them to the tray.
+- **State Management:** Uses a state machine to manage the testing workflow, including normal operations, error handling, and pause/resume functionality.
+- **Hardware Integration:** Designed to integrate with robotic test stands and hardware components (currently in simulation mode).
 
 ## States
 
@@ -140,11 +135,14 @@ sm.set_chip_data(5, col=3, row=2)
 - **Log-Driven State Transitions:** Add support for monitoring a log file and triggering state transitions automatically when a log line matches a state name, enabling seamless integration with external robot software.
 
 ## Recent Changes
-
 - **Session Folder Creation:** Each time the system enters the ground state, a new folder is created in the 'images/' directory, named with the current date and time, to store session-specific data (e.g., OCR images).
 - **Chip Position Tracking:** Now uses a dictionary (`chip_positions`) to manage all chip-related data for 40 positions (10 columns × 4 rows).
 - **State Machine Refactor:** States and transitions are more clearly defined and grouped (normal, pause, error, reset).
 - **Pause/Resume:** Improved interactive pause menu, with options to resume, advance, or return to ground state. The last normal state is tracked for accurate resumption.
 - **Tray Handling:** Methods for advancing, resetting, and checking chip positions on the tray.
+- **Log-Based State Transitions:** The state machine can now monitor a log file and automatically transition to states specified by new log entries. Call `read_log_and_transition(log_path)` to enable this feature.
+  - Call `read_log_and_transition(log_path)` on the `RTSStateMachine` instance, where `log_path` is the path to your log file.
+  - Each new line in the log file should contain the name of a valid state (case-insensitive).
+  - The state machine will transition to the specified state if it is different from the current state.
 - **Integration Points:** Hooks for hardware integration (e.g., `MoveChipsToSockets`) are present and can be enabled as needed (still WIP).
 - **Error Handling:** Expanded error states and transitions for robust operation.

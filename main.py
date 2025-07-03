@@ -25,5 +25,5 @@ if __name__ == "__main__":
     # sm.cycle()  # Moving Chip to Tray (should attempt real function)
     # sm.cycle()  # Back to Ground
 
-    log_file = "state_log.txt"  # Change as needed
+    log_file = "state_logs.txt"  # Change as needed
     sm.read_log_and_transition(log_file)

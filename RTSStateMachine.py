@@ -413,6 +413,7 @@ class RTSStateMachine(StateMachine):
             "moving_chip_to_socket": self.moving_chip_to_socket,
             "testing": self.testing,
             "writing_to_hwdb": self.writing_to_hwdb,
+            "moving_chip_to_tray": self.moving_chip_to_tray,
             "reseat": self.reseat,
             "moving_chip_to_bad_tray": self.moving_chip_to_bad_tray,
             "pause": self.pause,
@@ -436,10 +437,9 @@ class RTSStateMachine(StateMachine):
             try:
                 if not os.path.exists(log_path):
                     print(f"Log file does not exist: {log_path}")
-                    time.sleep(1)
-                    continue
+                    break
                 with open(log_path, 'r') as f:
-                    lines = f.readlines()
+                    lines = f.readlines()   # Store all lines from the log file in a list
                 # Process only new lines
                 new_lines = lines[last_line:]
                 for line in new_lines:
