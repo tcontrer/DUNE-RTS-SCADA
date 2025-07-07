@@ -411,9 +411,13 @@ class RTSStateMachine(StateMachine):
             "ground": self.ground,
             "surveying_sockets": self.surveying_sockets,
             "moving_chip_to_socket": self.moving_chip_to_socket,
+            "MoveChipFromTrayToSocket": self.moving_chip_to_socket,
+            "Ran chip analysis": self.testing,
+            "Jumped to DAT": self.testing,
             "testing": self.testing,
             "writing_to_hwdb": self.writing_to_hwdb,
             "moving_chip_to_tray": self.moving_chip_to_tray,
+            "Picked up chip from tray": self.moving_chip_to_socket,
             "reseat": self.reseat,
             "moving_chip_to_bad_tray": self.moving_chip_to_bad_tray,
             "pause": self.pause,
@@ -444,11 +448,13 @@ class RTSStateMachine(StateMachine):
                 new_lines = lines[last_line:]
                 for line in new_lines:
                     state_str = line.strip().lower()
-                    if state_str in state_map:
-                        # Only transition if not already in that state
-                        if self.current_state != state_map[state_str]:
-                            self.current_state = state_map[state_str]
-                            print(f"Transitioned to state: {self.current_state}")
+                    # Find first matching state
+                    for key, state in state_map.items():
+                        if key.lower() in state_str:
+                            if self.current_state != state:
+                                self.current_state = state
+                                print(f"'{state_str}' -> {self.current_state}")
+                            break
                 last_line = len(lines)
                 time.sleep(1)
             except KeyboardInterrupt:
