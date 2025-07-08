@@ -412,7 +412,6 @@ class RTSStateMachine(StateMachine):
             "surveying_sockets": self.surveying_sockets,
             "moving_chip_to_socket": self.moving_chip_to_socket,
             "MoveChipFromTrayToSocket": self.moving_chip_to_socket,
-            "Ran chip analysis": self.testing,
             "Jumped to DAT": self.testing,
             "testing": self.testing,
             "writing_to_hwdb": self.writing_to_hwdb,

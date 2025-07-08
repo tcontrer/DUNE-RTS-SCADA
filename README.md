@@ -42,11 +42,17 @@ This project implements a state machine for chip handling and testing automation
 
 ## Chip Tray System
 
-The system now tracks chip positions using a dictionary-based approach:
-- **chip_positions**: A dictionary with two lists: `'col'` and `'row'`, each of length 40 (10 columns × 4 rows)
-- **Position tracking**: Each index corresponds to a unique chip position, with `chip_positions['col'][i]` and `chip_positions['row'][i]` giving the column and row for chip `i`
-- **Automatic advancement**: The state machine uses `current_chip_index` to keep track of which chip is being processed
-- **Tray completion**: Handles end-of-tray logic with automatic reset
+The system tracks chip positions using a dictionary-based approach:
+- **chip_positions**: A dictionary with the following lists, each of length 40 (10 columns × 4 rows):
+  - `'tray'`: Tray number for each chip
+  - `'col'`: Column position (1–10)
+  - `'row'`: Row position (1–4)
+  - `'dat'`: DAT board number for each chip
+  - `'dat_socket'`: Socket number for each chip
+  - `'label'`: COLDATA label for each chip (e.g., 'CD0', 'CD1')
+- **Position tracking**: Each index corresponds to a unique chip position; e.g., `chip_positions['col'][i]` and `chip_positions['row'][i]` give the column and row for chip `i`.
+- **Automatic advancement**: The state machine uses `current_chip_index` to keep track of which chip is being processed.
+- **Tray completion**: Handles end-of-tray logic with automatic reset.
 
 ## Pause/Resume System
 
