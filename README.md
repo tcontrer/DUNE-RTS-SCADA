@@ -141,6 +141,9 @@ sm.set_chip_data(5, col=3, row=2)
 - **Log-Driven State Transitions:** Add support for monitoring a log file and triggering state transitions automatically when a log line matches a state name, enabling seamless integration with external robot software.
 
 ## Recent Changes
+- **Chip Position Population:** Added interactive user input for populating chip positions. Users can choose between manual entry (one chip at a time) or automatic full tray population. Manual mode includes input validation for all fields (tray: 1-2, column: 1-10, row: 1-4, DAT: 1-2, DAT socket: 21-22, label: CD0/CD1).
+- **MoveChipsToTray Implementation:** Added `MoveChipsToTray()` function integration in the "Moving Chip to Tray" state, matching the pattern used for `MoveChipsToSockets()`. Both functions now receive individual chip data rather than the entire chip_positions dictionary.
+- **Consistent Chip Advancement:** Chip position advancement now occurs only in `run_full_cycle()`, ensuring each chip completes a full testing cycle before moving to the next position.
 - **Session Folder Creation:** Each time the system enters the ground state, a new folder is created in the 'images/' directory, named with the current date and time, to store session-specific data (e.g., OCR images).
 - **Chip Position Tracking:** Now uses a dictionary (`chip_positions`) to manage all chip-related data for 40 positions (10 columns × 4 rows).
 - **State Machine Refactor:** States and transitions are more clearly defined and grouped (normal, pause, error, reset).
@@ -150,5 +153,5 @@ sm.set_chip_data(5, col=3, row=2)
   - Call `read_log_and_transition(log_path)` on the `RTSStateMachine` instance, where `log_path` is the path to your log file.
   - Each new line in the log file should contain the name of a valid state (case-insensitive).
   - The state machine will transition to the specified state if it is different from the current state.
-- **Integration Points:** Hooks for hardware integration (e.g., `MoveChipsToSockets`) are present and can be enabled as needed (still WIP).
+- **Integration Points:** Integration functions (e.g., `MoveChipsToSockets`, `MoveChipsToTray`) are present and can be enabled as needed (still WIP).
 - **Error Handling:** Expanded error states and transitions for robust operation.

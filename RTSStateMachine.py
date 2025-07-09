@@ -1,20 +1,44 @@
+"""
+DUNE RTS State Machine for automated chip testing and handling.
+
+This module implements a state machine for controlling robotic test stand operations,
+including chip movement, testing, and error handling. Supports both simulation and
+real hardware modes.
+
+Classes:
+    RTSStateMachine: Main state machine for chip testing automation
+"""
+
 from statemachine import StateMachine, State
-from FNAL_RTS_integration import MoveChipsToSockets
+from FNAL_RTS_integration import MoveChipsToSockets, MoveChipsToTray
 from RTS_CFG import RTS_CFG
 import sys
 import os
 from datetime import datetime
 import time
 
+
 class RTSStateMachine(StateMachine):
+    """
+    State machine for DUNE RTS chip testing automation.
+    
+    Manages the complete workflow of chip testing including movement, testing,
+    data recording, and error handling. Supports both simulation and hardware modes.
+    
+    Attributes:
+        BypassRTS (bool): When True, runs in simulation mode
+        chip_positions (dict): Dictionary containing chip position data
+        current_chip_index (int): Index of current chip being processed
+        last_normal_state (State): Last normal state for resume functionality
+    """
 
     def __init__(self):
+        """Initialize the state machine and prompt for chip population method."""
         super().__init__()
 
-        self.BypassRTS = True  # Set to False to use real hardware functions
+        self.BypassRTS = True
         self.last_normal_state = None
 
-        # Replace individual position tracking with dictionary-based approach
         self.chip_positions = {
             'tray': [],
             'col': [],
@@ -24,62 +48,25 @@ class RTSStateMachine(StateMachine):
             'label': []
         }
         
-        # Initialize with 40 chip positions (10 columns × 4 rows)
         self.max_col = 10
         self.max_row = 4
         self.current_chip_index = 0
         
-        # Populate the chip_positions dictionary for a full tray
-        self.populate_full_tray()
-        
-        # Initialize RTS connection
+        while True:
+            choice = input("Populate chip positions manually (m) or use full tray (f)? ").strip().lower()
+            if choice in ['m', 'manual']:
+                self.populate_manually()
+                break
+            elif choice in ['f', 'full']:
+                self.populate_full_tray()
+                break
+            else:
+                print("Please enter 'm' for manual or 'f' for full tray.")
+
         # self.rts = RTS_CFG()
         # self.rts.rts_init(port=201, host_ip='192.168.121.1')
-
-    def populate_full_tray(self):
-        """Populate chip_positions for a full tray (10 columns × 4 rows)."""
-        # Clear existing lists
-        for key in self.chip_positions:
-            self.chip_positions[key] = []
-        chip_counter = 0
-        for col in range(1, self.max_col + 1):
-            for row in range(1, self.max_row + 1):
-                self.chip_positions['col'].append(col)
-                self.chip_positions['row'].append(row)
-                self.chip_positions['tray'].append(2)
-                self.chip_positions['dat'].append(2)
-                if chip_counter % 2 == 0:
-                    self.chip_positions['dat_socket'].append(21)
-                    self.chip_positions['label'].append('CD0')
-                else:
-                    self.chip_positions['dat_socket'].append(22)
-                    self.chip_positions['label'].append('CD1')
-                chip_counter += 1
-
-    def populate_from_dicts(self, chip_list):
-        """
-        Populate chip_positions from a list of chip dictionaries.
-
-        Args:
-            chip_list (list of dict): Each dict should have keys matching chip_positions fields
-                (e.g., 'tray', 'col', 'row', 'dat', 'dat_socket', 'label').
-                Missing keys default to None.
-
-        Example:
-            chip_list = [
-                {'tray': 2, 'col': 1, 'row': 1, 'dat': 2, 'dat_socket': 21, 'label': 'CD0'},
-                {'tray': 2, 'col': 1, 'row': 2, 'dat': 2, 'dat_socket': 22, 'label': 'CD1'}
-            ]
-        """
-        # Clear existing
-        for key in self.chip_positions:
-            self.chip_positions[key] = []
-        for chip in chip_list:
-            for key in self.chip_positions:
-                self.chip_positions[key].append(chip.get(key, None))
-
-    # Normal states
-
+        
+    # State definitions
     ground = State("Ground", initial=True)
     surveying_sockets = State("Surveying Sockets")
     moving_chip_to_socket = State("Moving Chip to Socket")
@@ -87,14 +74,11 @@ class RTSStateMachine(StateMachine):
     writing_to_hwdb = State("Writing to HWDB")
     moving_chip_to_tray = State("Moving Chip to Tray")
 
-    # Fix states
     reseat = State("Reseat")
     moving_chip_to_bad_tray = State("Moving Chip to Bad Tray")
 
-    # Pause state
     pause = State("Pause")
 
-    # Error states
     no_server_connection = State("No Server Connection")
     chip_in_socket = State("Chip in Socket")
     vision_sequence_failed = State("Vision Sequence Failed")
@@ -109,6 +93,7 @@ class RTSStateMachine(StateMachine):
     no_wib_connection = State("No WIB Connection")
     failed_upload = State("Failed Upload")
 
+    # State transitions
     cycle = (
         ground.to(surveying_sockets)
         | surveying_sockets.to(moving_chip_to_socket)
@@ -203,9 +188,9 @@ class RTSStateMachine(StateMachine):
     )
 
     def on_enter_ground(self):
-        self.create_session_folder()
         print("Entering ground state - system ready")
         self.last_normal_state = self.current_state
+        self.create_session_folder()
 
     def on_enter_surveying_sockets(self):
         print("Starting to survey sockets")
@@ -215,14 +200,21 @@ class RTSStateMachine(StateMachine):
         print("Moving chip to test socket")
         self.last_normal_state = self.current_state
 
-        # Call MoveChipsToSockets with current chip position
+        if self.current_chip_index >= len(self.chip_positions['col']):
+            print("Error: No more chips to process")
+            return
+
+        chip_data = {key: self.chip_positions[key][self.current_chip_index] for key in self.chip_positions}
+        
         if self.BypassRTS:
             print("[SIMULATION] Moving chip to socket")
+            print(f"Would have moved chip to socket: {chip_data['label']} from tray {chip_data['tray']}, position ({chip_data['col']}, {chip_data['row']}) to DAT {chip_data['dat']} socket {chip_data['dat_socket']}")
         else:
             try:
-                MoveChipsToSockets(self.rts, self.chip_positions)
+                MoveChipsToSockets(self.rts, chip_data)
             except Exception as e:
                 print(f"Error calling MoveChipsToSockets: {e}")
+                return
 
     def on_enter_testing(self):
         print("Starting chip testing")
@@ -235,6 +227,17 @@ class RTSStateMachine(StateMachine):
     def on_enter_moving_chip_to_tray(self):
         print("Moving chip to tray")
         self.last_normal_state = self.current_state
+
+        if self.BypassRTS:
+            print("[SIMULATION] Moving chip to tray")
+            chip_data = {key: self.chip_positions[key][self.current_chip_index] for key in self.chip_positions}
+            print(f"Would have moved chip to tray: {chip_data['label']} from DAT {chip_data['dat']} socket {chip_data['dat_socket']} to tray {chip_data['tray']}, position ({chip_data['col']}, {chip_data['row']})")
+        else:
+            try:
+                chip_data = {key: self.chip_positions[key][self.current_chip_index] for key in self.chip_positions}
+                MoveChipsToTray(self.rts, chip_data)
+            except Exception as e:
+                print(f"Error calling MoveChipsToTray: {e}")
 
     def on_enter_pause(self):
         print("System paused - awaiting resume command")
@@ -285,7 +288,6 @@ class RTSStateMachine(StateMachine):
     def on_enter_failed_upload(self):
         print("Error: Failed to upload to HWDB")
 
-    # Pause methods
     def resume_to_previous(self):
         if self.last_normal_state:
             self.current_state = self.last_normal_state
@@ -293,8 +295,14 @@ class RTSStateMachine(StateMachine):
             print("Last normal state not found")
 
     def advance_to_next_in_cycle(self):
+        if self.last_normal_state is None:
+            print("Error: No previous state to resume from")
+            return
         self.resume_to_previous()
-        self.cycle()
+        try:
+            self.cycle()
+        except Exception as e:
+            print(f"Error advancing cycle: {e}")
 
     def pause_with_user_input(self):
         print(f"\nSYSTEM PAUSED")
@@ -332,7 +340,6 @@ class RTSStateMachine(StateMachine):
                 print("\n\nReceived interrupt signal. System remains paused.")
                 print("Type 1, 2, 3, or 4 to continue.")
 
-
     def advance(self):
         """Advance to the next chip position on the tray."""
         if self.current_chip_index < len(self.chip_positions['col']) - 1:
@@ -342,15 +349,18 @@ class RTSStateMachine(StateMachine):
 
     def get_position(self):
         """Get the current chip position on the tray."""
-        return (self.chip_positions['col'][self.current_chip_index], self.chip_positions['row'][self.current_chip_index])
+        if not self.chip_positions['col'] or self.current_chip_index >= len(self.chip_positions['col']):
+            return (0, 0)
+        return (self.chip_positions['col'][self.current_chip_index], 
+                self.chip_positions['row'][self.current_chip_index])
 
     def advance_chip_position(self):
-        """Advance to the next chip position on the tray."""
+        """Advance to the next chip position with automatic reset at end."""
         try:
             self.advance()
             print(f"Advanced to chip position: {self.get_position()}")
         except StopIteration:
-            print("Reached the end of the tray. Starting over.")
+            print("Reached the end of the tray.")
             self.current_chip_index = 0
 
     def reset_tray_position(self):
@@ -363,7 +373,7 @@ class RTSStateMachine(StateMachine):
         return self.current_chip_index == len(self.chip_positions['col']) - 1
 
     def run_full_cycle(self):
-        """Run a full test cycle for one chip and then advance to the next chip position."""
+        """Run a complete test cycle for one chip and advance position."""
         print(f"Starting full cycle at position {self.get_position()}")
         for i in range(6):
             self.cycle()
@@ -371,42 +381,45 @@ class RTSStateMachine(StateMachine):
         self.advance_chip_position()
     
     def handle_tray(self):
-        """Run a full test cycle for all 40 chips on the tray."""
-        for i in range(40):
-            print(f"\n--- Processing chip {i+1}/40 ---")
+        """Process all chips on the tray with full test cycles."""
+        num_chips = len(self.chip_positions['col'])
+        for i in range(num_chips):
+            print(f"\n--- Processing chip {i+1}/{num_chips} ---")
             self.run_full_cycle()
-        print(f"\nTray processing complete! Processed 40 chips.")
+        print(f"\nTray processing complete! Processed {num_chips} chips.")
 
     def get_current_chip_data(self):
-        """Get all data for the current chip."""
-        return {
-            'col': self.chip_positions['col'][self.current_chip_index],
-            'row': self.chip_positions['row'][self.current_chip_index],
-            'index': self.current_chip_index
-        }
+        """Get all data for the current chip as a dictionary."""
+        return {key: self.chip_positions[key][self.current_chip_index] for key in self.chip_positions}
     
     def set_chip_data(self, index, col=None, row=None):
-        """Set data for a specific chip at the given index."""
+        """Set column and/or row data for a specific chip index."""
+        if index < 0 or index >= len(self.chip_positions['col']):
+            raise ValueError(f"Invalid index: {index}")
+        if col is not None and (col < 1 or col > 10):
+            raise ValueError(f"Invalid column: {col}")
+        if row is not None and (row < 1 or row > 4):
+            raise ValueError(f"Invalid row: {row}")
         if col is not None:
             self.chip_positions['col'][index] = col
         if row is not None:
             self.chip_positions['row'][index] = row
 
     def create_session_folder(self):
-        """Create a new folder in 'images/' named with the current date and time."""
+        """Create a timestamped session folder for storing test data."""
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         folder_name = f'session_{timestamp}'
-        folder_path = os.path.join(folder_name)
+        folder_path = os.path.join('images', folder_name)
         os.makedirs(folder_path, exist_ok=True)
         self.current_session_folder = folder_path
 
     def read_log_and_transition(self, log_path):
         """
-        Periodically read a log file and transition the state machine to the state specified in each new line.
+        Monitor a log file and automatically transition states based on log entries.
+        
         Args:
-            log_path (str): Path to the log file.
+            log_path (str): Path to the log file to monitor
         """
-        # Map log strings to state attributes
         state_map = {
             "ground": self.ground,
             "surveying_sockets": self.surveying_sockets,
@@ -442,12 +455,10 @@ class RTSStateMachine(StateMachine):
                     print(f"Log file does not exist: {log_path}")
                     break
                 with open(log_path, 'r') as f:
-                    lines = f.readlines()   # Store all lines from the log file in a list
-                # Process only new lines
+                    lines = f.readlines()
                 new_lines = lines[last_line:]
                 for line in new_lines:
                     state_str = line.strip().lower()
-                    # Find first matching state
                     for key, state in state_map.items():
                         if key.lower() in state_str:
                             if self.current_state != state:
@@ -462,3 +473,116 @@ class RTSStateMachine(StateMachine):
             except Exception as e:
                 print(f"Error reading log file: {e}")
                 time.sleep(1)
+    
+    def populate_full_tray(self):
+        """Populate chip_positions with a complete 10x4 tray configuration."""
+        for key in self.chip_positions:
+            self.chip_positions[key] = []
+        chip_counter = 0
+        for col in range(1, self.max_col + 1):
+            for row in range(1, self.max_row + 1):
+                self.chip_positions['col'].append(col)
+                self.chip_positions['row'].append(row)
+                self.chip_positions['tray'].append(2)
+                self.chip_positions['dat'].append(2)
+                if chip_counter % 2 == 0:
+                    self.chip_positions['dat_socket'].append(21)
+                    self.chip_positions['label'].append('CD0')
+                else:
+                    self.chip_positions['dat_socket'].append(22)
+                    self.chip_positions['label'].append('CD1')
+                chip_counter += 1
+
+    def populate_from_dicts(self, chip_list):
+        """
+        Populate chip_positions from a list of chip dictionaries.
+        
+        Args:
+            chip_list (list): List of dictionaries containing chip data
+        """
+        for key in self.chip_positions:
+            self.chip_positions[key] = []
+        for chip in chip_list:
+            for key in self.chip_positions:
+                self.chip_positions[key].append(chip.get(key, None))
+
+    def populate_manually(self):
+        """Interactively populate chip_positions with user input."""
+        print("\nManual chip population mode.")
+        print("Enter chip details one by one. Allowed values:")
+        print("Tray: 1 or 2 • Column: 1-10 • Row: 1-4 • DAT: 1 or 2 • DAT socket: 21 or 22 • Label: CD0 or CD1")
+        
+        while True:
+            print(f"\n--- Chip {len(self.chip_positions['tray']) + 1} ---")
+            
+            while True:
+                try:
+                    tray = int(input("Tray number (1 or 2): ").strip())
+                    if tray in [1, 2]:
+                        break
+                    else:
+                        print("Tray number must be 1 or 2.")
+                except ValueError:
+                    print("Please enter 1 or 2.")
+            
+            while True:
+                try:
+                    col = int(input("Column (1-10): ").strip())
+                    if 1 <= col <= 10:
+                        break
+                    else:
+                        print("Column must be between 1 and 10.")
+                except ValueError:
+                    print("Please enter a valid number.")
+            
+            while True:
+                try:
+                    row = int(input("Row (1-4): ").strip())
+                    if 1 <= row <= 4:
+                        break
+                    else:
+                        print("Row must be between 1 and 4.")
+                except ValueError:
+                    print("Please enter a valid number.")
+            
+            while True:
+                try:
+                    dat = int(input("DAT board number (1 or 2): ").strip())
+                    if dat in [1, 2]:
+                        break
+                    else:
+                        print("DAT board number must be 1 or 2.")
+                except ValueError:
+                    print("Please enter 1 or 2.")
+            
+            while True:
+                try:
+                    dat_socket = int(input("DAT socket number (21 or 22): ").strip())
+                    if dat_socket in [21, 22]:
+                        break
+                    else:
+                        print("DAT socket number must be 21 or 22.")
+                except ValueError:
+                    print("Please enter 21 or 22.")
+            
+            while True:
+                label = input("COLDATA label (CD0 or CD1): ").strip().upper()
+                if label in ["CD0", "CD1"]:
+                    break
+                else:
+                    print("Label must be CD0 or CD1.")
+            
+            self.chip_positions['tray'].append(tray)
+            self.chip_positions['col'].append(col)
+            self.chip_positions['row'].append(row)
+            self.chip_positions['dat'].append(dat)
+            self.chip_positions['dat_socket'].append(dat_socket)
+            self.chip_positions['label'].append(label)
+            
+            print(f"Added chip: {label} at tray {tray}, position ({col}, {row})")
+            
+            continue_input = input("Add another chip? (y/n): ").strip().lower()
+            if continue_input not in ['y', 'yes']:
+                break
+        
+        print(f"Manual population complete. Added {len(self.chip_positions['tray'])} chips.")
