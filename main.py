@@ -7,5 +7,5 @@ if __name__ == "__main__":
     # log_file = "/path/to/RobotLog.txt"  # Change as needed
     # sm.read_log_and_transition(log_file)
 
-    sm.run_full_cycle()
-    # sm.handle_tray()
+    # sm.run_full_cycle()
+    sm.handle_tray()

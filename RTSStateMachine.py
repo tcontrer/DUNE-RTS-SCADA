@@ -393,7 +393,17 @@ class RTSStateMachine(StateMachine):
         return {key: self.chip_positions[key][self.current_chip_index] for key in self.chip_positions}
     
     def set_chip_data(self, index, col=None, row=None):
-        """Set column and/or row data for a specific chip index."""
+        """
+        Set column and/or row data for a specific chip index.
+        
+        Args:
+            index (int): Chip index in the chip_positions arrays (0 to len-1)
+            col (int, optional): Column number (1-10). If None, column is not changed.
+            row (int, optional): Row number (1-4). If None, row is not changed.
+            
+        Raises:
+            ValueError: If index is out of bounds or col/row values are invalid
+        """
         if index < 0 or index >= len(self.chip_positions['col']):
             raise ValueError(f"Invalid index: {index}")
         if col is not None and (col < 1 or col > 10):
